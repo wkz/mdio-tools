@@ -86,6 +86,7 @@ int mdio_xfer(const char *bus, struct mdio_prog *prog,
 
 int mdio_for_each(const char *match,
 		  int (*cb)(const char *bus, void *arg), void *arg);
+int mdio_modprobe(void);
 int mdio_init(void);
 
 #endif	/* _LIBMDIO_H */

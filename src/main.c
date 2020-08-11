@@ -261,9 +261,12 @@ int main(int argc, char **argv)
 {
 	struct cmd *cmd;
 
+	if (mdio_modprobe())
+		fprintf(stderr, "WARN: mdio-netlink module not detected, "
+			"and could not be loaded.\n");
+
 	if (mdio_init()) {
-		fprintf(stderr, "ERROR: Unable to initialize, "
-			"is the mdio-netlink module loaded?\n");
+		fprintf(stderr, "ERROR: Unable to initialize.\n");
 		return 1;
 	}
 

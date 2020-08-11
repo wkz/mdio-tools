@@ -10,6 +10,8 @@
 #include <linux/genetlink.h>
 #include <linux/mdio.h>
 #include <linux/mdio-netlink.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "mdio.h"
 
@@ -491,6 +493,28 @@ static int family_id_cb(const struct nlmsghdr *nlh, void *_null)
 
 	mdio_family = mnl_attr_get_u16(tb[CTRL_ATTR_FAMILY_ID]);
 	return MNL_CB_OK;
+}
+
+int mdio_modprobe(void)
+{
+	int wstatus;
+	pid_t pid;
+
+	pid = fork();
+	if (pid < 0) {
+		return -errno;
+	} else if (!pid) {
+		execl("/sbin/modprobe", "modprobe", "mdio-netlink", NULL);
+		exit(1);
+	}
+
+	if (waitpid(pid, &wstatus, 0) <= 0)
+		return -ECHILD;
+
+	if (WIFEXITED(wstatus) && !WEXITSTATUS(wstatus))
+		return 0;
+
+	return -EPERM;
 }
 
 int mdio_init(void)
