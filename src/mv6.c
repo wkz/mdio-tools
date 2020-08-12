@@ -127,6 +127,120 @@ static int mv6_help_exec(int argc, char **argv)
 	return 0;
 }
 
+
+int mv6_lag_cb(uint32_t *data, int len, int err, void *_null)
+{
+	uint32_t agg = 0x7ff;
+	int lag, mask, port;
+
+	if (len != 1 + 8 + 16)
+		return 1;
+
+	printf("LAG Masks (Hash:%s):\n", data[0] ? "Yes" : "No");
+
+	puts("\e[7m  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+
+	for (mask = 0; mask < 8; mask++)
+		agg &= data[1 + mask];
+
+	for (mask = 0; mask < 8; mask++) {
+		for (port = 0; port < 11; port++) {
+			if (BIT(port) & agg)
+				fputs("  |", stdout);
+			else if (BIT(port) & data[1 + mask])
+				printf("  %d", mask);
+			else
+				fputs("  .", stdout);
+		}
+		putchar('\n');
+	}
+
+	puts("\nLAG Maps:");
+
+	data = &data[1 + 8];
+
+	puts("\e[7mID  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+	for (lag = 0; lag < 16; lag++) {
+		if (!(data[lag] & 0x7ff))
+			continue;
+
+		printf("%2d", lag);
+		for (port = 0; port < 11; port++) {
+			if (BIT(port) & data[lag])
+				printf("  %x", port);
+			else
+				fputs("  .", stdout);
+		}
+		putchar('\n');
+	}
+
+	return 0;
+}
+
+static int mv6_lag_exec(int argc, char **argv)
+{
+	struct mv6_mdio_ops mops = {
+		.ops = {
+			.usage = mv6_usage,
+			.push_read = mv6_push_read,
+			.push_write = mv6_push_write,
+		}
+	};
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	int get_next, err;
+
+	if (argc < 3) {
+		mv6_usage(stderr);
+		return 1;
+	}
+
+	if (mdio_parse_bus(argv[1], &mops.ops.bus))
+		return 1;
+
+	if (mdio_parse_dev(argv[2], &mops.sw, false))
+		return 1;
+
+	if (mops.sw)
+		mv6_push_wait_cmd(&prog, mops.sw);
+
+	/* LAG masks. Read out hash bit to r1 and emit */
+	mv6_push_read_to(&mops.ops, &prog, MV6_G2, 0x7, 1);
+	mdio_prog_push(&prog, INSN(AND, REG(1), IMM(BIT(11)), REG(1)));
+	mdio_prog_push(&prog, INSN(EMIT, REG(1), 0, 0));
+	get_next = prog.len;
+	/* Read and emit current mask */
+	mv6_push_write(&mops.ops, &prog, MV6_G2, 0x7, REG(1));
+	mv6_push_read(&mops.ops, &prog, MV6_G2, 0x7);
+	mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	/* Move to next mask */
+	mdio_prog_push(&prog, INSN(ADD, REG(1), IMM(0x1000), REG(1)));
+	mdio_prog_push(&prog, INSN(AND, REG(1), IMM(0x7000), REG(2)));
+	mdio_prog_push(&prog, INSN(JNE, REG(2), IMM(0), GOTO(prog.len, get_next)));
+
+	/* LAG maps. */
+	mdio_prog_push(&prog, INSN(ADD, IMM(0), IMM(0), REG(1)));
+	get_next = prog.len;
+	/* Read and emit current map */
+	mv6_push_write(&mops.ops, &prog, MV6_G2, 0x8, REG(1));
+	mv6_push_read(&mops.ops, &prog, MV6_G2, 0x8);
+	mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	/* Move to next map */
+	mdio_prog_push(&prog, INSN(ADD, REG(1), IMM(0x0800), REG(1)));
+	mdio_prog_push(&prog, INSN(JNE, REG(1), IMM(0x8000), GOTO(prog.len, get_next)));
+
+	err = mdio_xfer(mops.ops.bus, &prog, mv6_lag_cb, NULL);
+	free(mops.ops.bus);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: LAG operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
+
+
+
 int mv6_atu_cb(uint32_t *data, int len, int err, void *_null)
 {
 	int port, state;
@@ -480,6 +594,7 @@ int mv6_raw_exec(int argc, char **argv)
 
 static const struct cmd mv6_cmds[] = {
 	{ .name = "help", .exec = mv6_help_exec },
+	{ .name = "lag",  .exec = mv6_lag_exec  },
 	{ .name = "atu",  .exec = mv6_atu_exec  },
 	{ .name = "vtu",  .exec = mv6_vtu_exec  },
 	{ .name = "dump", .exec = mv6_dump_exec },
