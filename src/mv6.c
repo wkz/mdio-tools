@@ -254,7 +254,7 @@ int mv6_atu_cb(uint32_t *data, int len, int err, void *_null)
 		       data[3] >> 8, data[3] & 0xff);
 
 		if (BIT(15) & data[0]) {
-			printf("  lag%02u                          ",
+			printf("  lag%-2u                          ",
 			       (data[0] >> 4) & 0x1f);
 		} else {
 			for (port = 0; port < 11; port++) {
