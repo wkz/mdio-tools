@@ -130,8 +130,8 @@ static int mv6_help_exec(int argc, char **argv)
 
 int mv6_lag_cb(uint32_t *data, int len, int err, void *_null)
 {
-	uint32_t agg = 0x7ff;
 	int lag, mask, port;
+	uint32_t agg = 0;
 
 	if (len != 1 + 8 + 16)
 		return 1;
@@ -140,17 +140,19 @@ int mv6_lag_cb(uint32_t *data, int len, int err, void *_null)
 
 	puts("\e[7m  0  1  2  3  4  5  6  7  8  9  a\e[0m");
 
-	for (mask = 0; mask < 8; mask++)
-		agg &= data[1 + mask];
+	for (lag = 0; lag < 16; lag++)
+		agg |= data[1 + 8 + lag];
 
 	for (mask = 0; mask < 8; mask++) {
 		for (port = 0; port < 11; port++) {
-			if (BIT(port) & agg)
-				fputs("  |", stdout);
-			else if (BIT(port) & data[1 + mask])
-				printf("  %d", mask);
-			else
+			if (BIT(port) & data[1 + mask]) {
+				if (BIT(port) & agg)
+					printf("  %d", mask);
+				else
+					fputs("  |", stdout);
+			} else {
 				fputs("  .", stdout);
+			}
 		}
 		putchar('\n');
 	}
