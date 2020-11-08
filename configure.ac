@@ -9,6 +9,7 @@ AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	src/mdio/Makefile
 ])
 AC_CONFIG_MACRO_DIRS(m4)
 
