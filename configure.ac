@@ -10,6 +10,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/mdio/Makefile
+	src/mvls/Makefile
 ])
 AC_CONFIG_MACRO_DIRS(m4)
 
