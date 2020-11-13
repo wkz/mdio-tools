@@ -11,9 +11,9 @@
 #define bits(_reg, _bit, _n) (((_reg) >> (_bit)) & ((1 << (_n)) - 1))
 #define bit(_reg, _bit) bits(_reg, _bit, 1)
 
-static int opal_dev_vtu_parse(struct dev *dev,
-			      struct mv88e6xxx_devlink_vtu_entry *kentry,
-			      struct vtu_entry *entry)
+static int __dev_vtu_parse(struct dev *dev,
+			   struct mv88e6xxx_devlink_vtu_entry *kentry,
+			   struct vtu_entry *entry, uint8_t mbits)
 {
 	int i;
 
@@ -25,8 +25,8 @@ static int opal_dev_vtu_parse(struct dev *dev,
 	entry->sid = bits(kentry->sid, 0, 6);
 
 	for (i = 0; i < 11; i++)
-		entry->member[i] =
-			(kentry->data[i >> 2] >> ((i & 3) << 2)) & 3;
+		entry->member[i] = bits(kentry->data[i / (16 / mbits)],
+					(i * mbits) & 0xf, 2);
 
 	entry->policy = bit(kentry->fid, 12);
 
@@ -34,6 +34,20 @@ static int opal_dev_vtu_parse(struct dev *dev,
 	entry->qpri.set = 0;
 	entry->fpri.set = 0;
 	return 0;
+}
+
+static int peridot_dev_vtu_parse(struct dev *dev,
+				 struct mv88e6xxx_devlink_vtu_entry *kentry,
+				 struct vtu_entry *entry)
+{
+	return __dev_vtu_parse(dev, kentry, entry, 2);
+}
+
+static int opal_dev_vtu_parse(struct dev *dev,
+			      struct mv88e6xxx_devlink_vtu_entry *kentry,
+			      struct vtu_entry *entry)
+{
+	return __dev_vtu_parse(dev, kentry, entry, 4);
 }
 
 int opal_dev_atu_parse(struct dev *dev,
@@ -85,6 +99,14 @@ const struct family opal_family = {
 	.dev_vtu_parse = opal_dev_vtu_parse,
 };
 
+const struct family peridot_family = {
+	.port_lag = opal_port_lag,
+	.port_fid = opal_port_fid,
+
+	.dev_atu_parse = opal_dev_atu_parse,
+	.dev_vtu_parse = peridot_dev_vtu_parse,
+};
+
 const struct chip chips[] = {
 	{
 		.id = "Marvell 88E6097/88E6097F",
@@ -98,7 +120,7 @@ const struct chip chips[] = {
 	},
 	{
 		.id = "Marvell 88E6390X",
-		.family = &opal_family,
+		.family = &peridot_family,
 		.n_ports = 11,
 	},
 
