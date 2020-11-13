@@ -488,13 +488,20 @@ void env_show_atu(struct env *env)
 			       atu_mc_str[entry.state.mc] : atu_uc_str[entry.state.uc],
 			       prio_c(entry.qpri), prio_c(entry.fpri));
 
+			if (entry.lag) {
+				printf("  lag %x", entry.portvec);
+				goto next;
+			}
+
 			for (i = 0; i < 11; i++) {
 				if (bit(entry.portvec, i))
 					printf("  %x", i);
 				else
-					fputs("  .", stdout);
+					fputs(i >= dev->chip->n_ports ?
+					      "   " : "  .", stdout);
 			}
 
+		next:
 			putchar('\n');
 			kentry++;
 		}
