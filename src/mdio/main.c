@@ -64,7 +64,7 @@ int bare_push_read(struct mdio_ops *ops, struct mdio_prog *prog,
 int bare_push_write(struct mdio_ops *ops, struct mdio_prog *prog,
 		    uint16_t dev, uint16_t reg, uint32_t val)
 {
-	mdio_prog_push(prog, INSN(READ,  IMM(dev), IMM(reg),  val));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(dev), IMM(reg),  val));
 	return 0;
 }
 
