@@ -38,6 +38,11 @@ struct devlink_region {
 	size_t size;
 };
 
+static inline int devlink_region_loaded(struct devlink_region *region)
+{
+	return region->size != 0;
+}
+
 static inline void devlink_region_free(struct devlink_region *region)
 {
 	if (region->data.u8)

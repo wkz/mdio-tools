@@ -137,6 +137,7 @@ struct dev {
 	struct port_list ports;
 
 	struct devlink_region global1;
+	struct devlink_region pvt;
 
 	TAILQ_ENTRY(dev) node;
 };

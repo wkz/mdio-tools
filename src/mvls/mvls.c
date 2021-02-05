@@ -187,14 +187,25 @@ static const char *port_lag_str(struct port *port)
 	return str;
 }
 
-
-static int port_init(struct port *port)
+static int port_load_regs(struct port *port)
 {
 	struct dev *dev = port->dev;
 	struct env *env = dev->env;
 
+	if (devlink_region_loaded(&port->regs))
+		return 0;
+
 	return devlink_port_region_get(&env->dl, &dev->devlink, port->index,
 				       "port", devlink_region_dup_cb, &port->regs);
+}
+
+static int dev_load_pvt(struct dev *dev)
+{
+	if (devlink_region_loaded(&dev->pvt))
+		return 0;
+
+	return devlink_region_get(&dev->env->dl, &dev->devlink,
+				  "pvt", devlink_region_dup_cb, &dev->pvt);
 }
 
 static int dev_init(struct dev *dev)
@@ -440,7 +451,7 @@ void env_show_ports(struct env *env)
 			       dev->index, dev->chip->id);
 
 		TAILQ_FOREACH(port, &dev->ports, node) {
-			port_init(port);
+			port_load_regs(port);
 			ctrl = reg16(port->regs, 4);
 
 			printf("%-8s  %x  %4s  %c%c  %c%c  %c %2s  %4u  %4u\n", port->netdev,
@@ -562,6 +573,118 @@ void env_show_vtu(struct env *env)
 	}
 }
 
+void pvt_print_cell(uint16_t spvt, uint16_t dpvt, int src, int dst)
+{
+	if (bit(spvt, dst) && bit(dpvt, src))
+		fputs(" x", stdout);
+	else if (bit(spvt, dst))
+		fputs(" ^", stdout);
+	else if (bit(dpvt, src))
+		fputs(" <", stdout);
+	else
+		fputs(" .", stdout);
+
+}
+
+void env_show_pvt_port(struct port *src, unsigned lags)
+{
+	struct env *env = src->dev->env;
+	uint16_t spvt, dpvt;
+	struct port *port;
+	struct dev *dev;
+	int lag;
+
+	printf("\e[7m%x %x\e[0m", src->dev->index, src->index);
+
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		TAILQ_FOREACH(port, &dev->ports, node) {
+			if (port->dev == src->dev) {
+				spvt = reg16(src->regs, 6);
+				dpvt = reg16(port->regs, 6);
+			} else {
+				spvt = reg16(dev->pvt, (src->dev->index << 4) + src->index);
+				dpvt = reg16(src->dev->pvt, (port->dev->index << 4) + port->index);
+			}
+
+			pvt_print_cell(spvt, dpvt, src->index, port->index);
+		}
+
+		if (TAILQ_NEXT(dev, node) || lags)
+			putchar(' ');
+	}
+
+	for (lag = 0; lag < 16; lag++) {
+		if (!(lags & (1 << lag)))
+			continue;
+
+		dpvt = reg16(src->dev->pvt, (0x1f << 4) + lag);
+		pvt_print_cell(0, dpvt, src->index, 0);
+	}
+
+	putchar('\n');
+}
+
+void env_show_pvt(struct env *env)
+{
+	struct dev *dev;
+	struct port *port;
+	unsigned lags = 0;
+	int err, lag;
+
+	fputs("\e[7mD  ", stdout);
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		err = dev_load_pvt(dev);
+		if (err)
+			return;
+
+		TAILQ_FOREACH(port, &dev->ports, node) {
+			err = port_load_regs(port);
+			if (err)
+				return;
+
+			lag = port_op(port, lag);
+			if (lag >= 0)
+				lags |= 1 << lag;
+
+			printf(" %x", dev->index);
+		}
+
+		if (TAILQ_NEXT(dev, node))
+			putchar(' ');
+	}
+
+	if (lags)
+		putchar(' ');
+
+	for (lag = 0; lag < 16; lag++)
+		if (lags & (1 << lag))
+			fputs(" L", stdout);
+
+	fputs("\n  P", stdout);
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		TAILQ_FOREACH(port, &dev->ports, node)
+			printf(" %x", port->index);
+
+		if (TAILQ_NEXT(dev, node) || lags)
+			putchar(' ');
+	}
+
+	for (lag = 0; lag < 16; lag++)
+		if (lags & (1 << lag))
+			printf(" %x", lag);
+
+	puts("\e[0m");
+
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		TAILQ_FOREACH(port, &dev->ports, node) {
+			env_show_pvt_port(port, lags);
+		}
+
+		if (TAILQ_NEXT(dev, node))
+			puts("\e[7m   \e[0m");
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct env env;
@@ -583,6 +706,8 @@ int main(int argc, char **argv)
 		env_show_atu(&env);
 	if (!strcmp(argv[1], "vtu"))
 		env_show_vtu(&env);
+	if (!strcmp(argv[1], "pvt"))
+		env_show_pvt(&env);
 
 	return 0;
 }
