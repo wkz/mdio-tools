@@ -27,6 +27,26 @@
 		.arg2 = _a2			\
 	})
 
+static inline char *argv_peek(int argc, char **argv)
+{
+	if (argc <= 0)
+		return NULL;
+
+	return argv[0];
+}
+
+static inline char *argv_pop(int *argcp, char ***argvp)
+{
+	char *arg = argv_peek(*argcp, *argvp);
+
+	if (!arg)
+		return NULL;
+
+	(*argcp)--;
+	(*argvp)++;
+	return arg;
+}
+
 struct cmd {
 	const char *name;
 	int (*exec)(int argc, char **argv);
@@ -88,5 +108,34 @@ int mdio_for_each(const char *match,
 		  int (*cb)(const char *bus, void *arg), void *arg);
 int mdio_modprobe(void);
 int mdio_init(void);
+
+struct mdio_driver;
+
+struct mdio_device {
+	const struct mdio_driver *driver;
+	char *bus;
+
+	struct {
+		uint32_t max;
+		uint8_t  stride;
+		uint8_t  width;
+	} mem;
+};
+
+struct mdio_driver {
+	/* Mandatory */
+	int (*read) (struct mdio_device *dev, struct mdio_prog *prog,
+		     uint32_t reg);
+	int (*write)(struct mdio_device *dev, struct mdio_prog *prog,
+		     uint32_t reg, uint32_t val);
+
+	/* Optional */
+	int (*parse_reg)(struct mdio_device *dev, int *argcp, char ***argvp,
+			 uint32_t *regs, uint32_t *rege);
+	int (*parse_val)(struct mdio_device *dev, int *argcp, char ***argvp,
+			 uint32_t *val, uint32_t *mask);
+};
+
+int mdio_common_exec(struct mdio_device *dev, int argc, char **argv);
 
 #endif	/* _LIBMDIO_H */

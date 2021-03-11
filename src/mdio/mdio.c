@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <glob.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -410,6 +411,182 @@ int mdio_raw_exec(struct mdio_ops *ops, int argc, char **argv)
 
 	return 0;
 }
+
+int mdio_device_dflt_parse_reg(struct mdio_device *dev,
+			       int *argcp, char ***argvp,
+			       uint32_t *regs, uint32_t *rege)
+{
+	unsigned long long r;
+	char *str, *end;
+
+	if (rege) {
+		fprintf(stderr, "ERROR: Implement ranges\n");
+		return ENOSYS;
+	}
+
+	str = argv_pop(argcp, argvp);
+	if (!str) {
+		fprintf(stderr, "ERROR: Expected register\n");
+		return EINVAL;
+	}
+
+	r = strtoull(str, &end, 0);
+	if (end[0]) {
+		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n", str);
+		return EINVAL;
+	}
+
+	if (r > dev->mem.max) {
+		fprintf(stderr, "ERROR: Register %llu is out of range "
+			"[0-%"PRIu32"]\n", r, dev->mem.max);
+		return ERANGE;
+	}
+
+	*regs = r;
+	return 0;
+}
+
+int mdio_device_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
+			  uint32_t *regs, uint32_t *rege)
+{
+	if (dev->driver->parse_reg)
+		return dev->driver->parse_reg(dev, argcp, argvp, regs, rege);
+
+	return mdio_device_dflt_parse_reg(dev, argcp, argvp, regs, rege);
+}
+
+int mdio_device_dflt_parse_val(struct mdio_device *dev,
+			       int *argcp, char ***argvp,
+			       uint32_t *val, uint32_t *mask)
+{
+	unsigned long long max = (1 << dev->mem.width) - 1;
+	unsigned long long v, m = 0;
+	char *str, *end;
+
+	if (dev->driver->parse_val)
+		return dev->driver->parse_val(dev, argcp, argvp, val, mask);
+
+	str = argv_pop(argcp, argvp);
+	if (!str) {
+		fprintf(stderr, "ERROR: Expected register\n");
+		return EINVAL;
+	}
+
+	v = strtoull(str, &end, 0);
+	if (!end[0])
+		goto done;
+
+	if (end[0] != '/')
+		goto err_invalid;
+
+	if (!mask) {
+		fprintf(stderr, "ERROR: Masking of value not allowed");
+		return EINVAL;
+	}
+
+	m = strtoull(end + 1, &end, 0);
+	if (end[0])
+		goto err_invalid;
+
+done:
+	if (v > max) {
+		fprintf(stderr, "ERROR: Value %#llx is out of range "
+			"[0-%#llx]", v, max);
+		return ERANGE;
+	}
+
+	if (m > max) {
+		fprintf(stderr, "ERROR: Mask %#llx is out of range "
+			"[0-%#llx]", m, max);
+		return ERANGE;
+	}
+
+	*val = v;
+	if (mask)
+		*mask = m;
+	return 0;
+
+err_invalid:
+	fprintf(stderr, "ERROR: \"%s\" is not a valid register value\n", str);
+	return EINVAL;
+}
+
+int mdio_device_parse_val(struct mdio_device *dev, int *argcp, char ***argvp,
+			  uint32_t *val, uint32_t *mask)
+{
+	if (dev->driver->parse_val)
+		return dev->driver->parse_val(dev, argcp, argvp, val, mask);
+
+	return mdio_device_dflt_parse_val(dev, argcp, argvp, val, mask);
+}
+
+int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	mdio_xfer_cb_t cb = mdio_raw_read_cb;
+	uint32_t reg, val, mask;
+	int err;
+
+	argv_pop(&argc, &argv);
+
+	err = mdio_device_parse_reg(dev, &argc, &argv, &reg, NULL);
+	if (err)
+		return err;
+
+	if (argv_peek(argc, argv)) {
+		cb = mdio_raw_write_cb;
+
+		err = mdio_device_parse_val(dev, &argc, &argv, &val, &mask);
+		if (err)
+			return err;
+	}
+
+	if (argv_peek(argc, argv)) {
+		fprintf(stderr, "ERROR: Unexpected argument");
+		return EINVAL;
+	}
+
+	if ((cb == mdio_raw_write_cb) && mask) {
+		err = dev->driver->read(dev, &prog, reg);
+		if (err)
+			return err;
+		mdio_prog_push(&prog, INSN(AND, REG(0), IMM(mask), REG(0)));
+		mdio_prog_push(&prog, INSN(OR,  REG(0), IMM(val),  REG(0)));
+		err = dev->driver->write(dev, &prog, reg, REG(0));
+		if (err)
+			return err;
+	} else if (cb == mdio_raw_write_cb) {
+		err = dev->driver->write(dev, &prog, reg, IMM(val));
+		if (err)
+			return err;
+	} else {
+		err = dev->driver->read(dev, &prog, reg);
+		if (err)
+			return err;
+		mdio_prog_push(&prog, INSN(EMIT,  REG(0),   0,         0));
+	}
+
+	err = mdio_xfer(dev->bus, &prog, cb, NULL);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: Raw operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
+
+int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	if (!argc)
+		return 1;
+
+	if (!strcmp(argv[0], "raw"))
+		return mdio_common_raw_exec(dev, argc, argv);
+
+	return 1;
+}
+
 
 
 struct mdio_xfer_data {
