@@ -208,6 +208,53 @@ static int dev_load_pvt(struct dev *dev)
 				  "pvt", devlink_region_dup_cb, &dev->pvt);
 }
 
+static void dev_print_portvec(struct dev *dev, uint16_t portvec)
+{
+	int i;
+
+	for (i = 0; i < 11; i++) {
+		if (bit(portvec, i))
+			printf("  %x", i);
+		else
+			fputs(i >= dev->chip->n_ports ?
+			      "   " : "  .", stdout);
+	}
+
+}
+
+static void dev_show_pvt(struct dev *dev)
+{
+	struct port *port;
+	int di, pi, err;
+
+	puts("\e[7m D P  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+
+	TAILQ_FOREACH(port, &dev->ports, node) {
+		err = port_load_regs(port);
+		if (err)
+			return;
+		printf("%2x %x", dev->index, port->index);
+		dev_print_portvec(dev, bits(reg16(port->regs, 6), 0, 11));
+		putchar('\n');
+	}
+
+	err = dev_load_pvt(dev);
+	if (err)
+		return;
+
+	for (di = 0; di < 32; di++) {
+		for (pi = 0; pi < 16; pi++) {
+			uint16_t portvec = reg16(dev->pvt, (di << 4) | pi);
+
+			if (portvec) {
+				printf("%2x %x", di, pi);
+				dev_print_portvec(dev, bits(portvec, 0, 11));
+				putchar('\n');
+			}
+		}
+	}
+}
+
 static int dev_init(struct dev *dev)
 {
 	int err;
@@ -222,7 +269,17 @@ static int dev_init(struct dev *dev)
 }
 
 
+static struct dev *env_dev_get(struct env *env, int index)
+{
+	struct dev *dev;
 
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		if (dev->index == index)
+			return dev;
+	}
+
+	return NULL;
+}
 
 static struct dev *env_dev_find(struct env *env,
 				const char *busid, const char *devid)
@@ -476,7 +533,7 @@ void env_show_atu(struct env *env)
 	struct devlink_region atu = { 0 };
 	struct mv88e6xxx_devlink_atu_entry *kentry;
 	struct atu_entry entry;
-	int err, i;
+	int err;
 
 	puts("\e[7mADDRESS             FID  STATE      Q  F  0  1  2  3  4  5  6  7  8  9  a\e[0m");
 
@@ -504,13 +561,7 @@ void env_show_atu(struct env *env)
 				goto next;
 			}
 
-			for (i = 0; i < 11; i++) {
-				if (bit(entry.portvec, i))
-					printf("  %x", i);
-				else
-					fputs(i >= dev->chip->n_ports ?
-					      "   " : "  .", stdout);
-			}
+			dev_print_portvec(dev, entry.portvec);
 
 		next:
 			putchar('\n');
@@ -706,8 +757,20 @@ int main(int argc, char **argv)
 		env_show_atu(&env);
 	if (!strcmp(argv[1], "vtu"))
 		env_show_vtu(&env);
-	if (!strcmp(argv[1], "pvt"))
-		env_show_pvt(&env);
+	if (!strcmp(argv[1], "pvt")) {
+		struct dev *dev;
+		int index;
+
+		if (argc == 2)
+			env_show_pvt(&env);
+
+		index = strtol(argv[2], NULL, 0);
+		dev = env_dev_get(&env, index);
+		if (!dev)
+			fprintf(stderr, "ERROR: Unknown device index \"%s\".\n", argv[2]);
+
+		dev_show_pvt(dev);
+	}
 
 	return 0;
 }
