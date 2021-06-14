@@ -23,7 +23,7 @@ int phy_write(struct mdio_device *dev, struct mdio_prog *prog,
 {
 	struct phy_device *pdev = (void *)dev;
 
-	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(reg),  IMM(val)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(reg),  val));
 	return 0;
 }
 
