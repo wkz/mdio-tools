@@ -1,3 +1,4 @@
+#include <err.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -17,8 +18,10 @@ static int __dev_vtu_parse(struct dev *dev,
 {
 	int i;
 
-	if (!bit(kentry->vid, 12))
-		return ENODATA;
+	if (!bit(kentry->vid, 12)) {
+		errno = ENODATA;
+		return -1;
+	}
 
 	entry->vid = bits(kentry->vid, 0, 12);
 	entry->fid = bits(kentry->fid, 0, 12);
@@ -54,8 +57,10 @@ int opal_dev_atu_parse(struct dev *dev,
 		       struct mv88e6xxx_devlink_atu_entry *kentry,
 		       struct atu_entry *entry)
 {
-	if (!bits(kentry->atu_data, 0, 4))
-		return ENODATA;
+	if (!bits(kentry->atu_data, 0, 4)) {
+		errno = ENODATA;
+		return -1;
+	}
 
 	entry->fid = kentry->fid;
 	entry->addr[0] = bits(kentry->atu_01, 8, 8);
@@ -231,16 +236,20 @@ static void dev_show_pvt(struct dev *dev)
 
 	TAILQ_FOREACH(port, &dev->ports, node) {
 		err = port_load_regs(port);
-		if (err)
+		if (err) {
+			warn("failed querying ports");
 			return;
+		}
 		printf("%2x %x", dev->index, port->index);
 		dev_print_portvec(dev, bits(reg16(port->regs, 6), 0, 11));
 		putchar('\n');
 	}
 
 	err = dev_load_pvt(dev);
-	if (err)
+	if (err) {
+		warn("failed querying pvt");
 		return;
+	}
 
 	for (di = 0; di < 32; di++) {
 		for (pi = 0; pi < 16; pi++) {
@@ -278,6 +287,7 @@ static struct dev *env_dev_get(struct env *env, int index)
 			return dev;
 	}
 
+	errno = EINVAL;
 	return NULL;
 }
 
@@ -296,6 +306,7 @@ static struct dev *env_dev_find(struct env *env,
 		return dev;
 	}
 
+	errno = ENODEV;
 	return NULL;
 }
 
@@ -481,8 +492,10 @@ int env_init(struct env *env)
 	if (err)
 		return err;
 
-	if (TAILQ_EMPTY(&env->devs))
-		return ENODEV;
+	if (TAILQ_EMPTY(&env->devs)) {
+		errno = ENODEV;
+		return -1;
+	}
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
 		err = dev_init(dev);
@@ -544,8 +557,10 @@ void env_show_atu(struct env *env)
 
 		err = devlink_region_get(&env->dl, &dev->devlink, "atu",
 					 devlink_region_dup_cb, &atu);
-		if (err)
+		if (err) {
+			warn("failed querying atu");
 			break;
+		}
 
 		kentry = (void *)atu.data.u8;
 		while (!dev_op(dev, atu_parse, kentry, &entry)) {
@@ -589,8 +604,10 @@ void env_show_vtu(struct env *env)
 
 		err = devlink_region_get(&env->dl, &dev->devlink, "vtu",
 					 devlink_region_dup_cb, &vtu);
-		if (err)
+		if (err) {
+			warn("failed querying vtu");
 			break;
+		}
 
 		kentry = (void *)vtu.data.u8;
 		while (!dev_op(dev, vtu_parse, kentry, &entry)) {
@@ -675,7 +692,7 @@ void env_show_pvt_port(struct port *src, unsigned lags)
 	putchar('\n');
 }
 
-void env_show_pvt(struct env *env)
+int env_show_pvt(struct env *env)
 {
 	struct dev *dev;
 	struct port *port;
@@ -685,13 +702,17 @@ void env_show_pvt(struct env *env)
 	fputs("\e[7mD  ", stdout);
 	TAILQ_FOREACH(dev, &env->devs, node) {
 		err = dev_load_pvt(dev);
-		if (err)
-			return;
+		if (err) {
+			warn("failed querying pvt");
+			return 1;
+		}
 
 		TAILQ_FOREACH(port, &dev->ports, node) {
 			err = port_load_regs(port);
-			if (err)
-				return;
+			if (err) {
+				warn("failed querying ports");
+				return 1;
+			}
 
 			lag = port_op(port, lag);
 			if (lag >= 0)
@@ -734,6 +755,8 @@ void env_show_pvt(struct env *env)
 		if (TAILQ_NEXT(dev, node))
 			puts("\e[7m   \e[0m");
 	}
+
+	return 0;
 }
 
 int usage(int rc)
@@ -766,10 +789,8 @@ int main(int argc, char **argv)
 {
 	struct env env;
 
-	if (env_init(&env)) {
-		fprintf(stderr, "ERROR: Failed to discover devices.\n");
-		return 1;
-	}
+	if (env_init(&env))
+		err(1, "failed discovering any devices");
 
 	if (argc == 1) {
 		env_show_vtu(&env); puts("");
@@ -791,17 +812,13 @@ int main(int argc, char **argv)
 		struct dev *dev;
 		int index;
 
-		if (argc == 2) {
-			env_show_pvt(&env);
-			return 0;
-		}
+		if (argc == 2)
+			return env_show_pvt(&env);
 
 		index = strtol(argv[2], NULL, 0);
 		dev = env_dev_get(&env, index);
-		if (!dev) {
-			fprintf(stderr, "ERROR: Unknown device index \"%s\".\n", argv[2]);
-			return 1;
-		}
+		if (!dev)
+			err(1, "unknown device index \"%s\"", argv[2]);
 
 		dev_show_pvt(dev);
 	}
