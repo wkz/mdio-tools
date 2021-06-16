@@ -736,6 +736,32 @@ void env_show_pvt(struct env *env)
 	}
 }
 
+int usage(int rc)
+{
+	fputs("Usage: mvls [CMD]\n"
+	      "\n"
+	      "Commands:\n"
+	      "\n"
+	      "  port\n"
+	      "    Displays and overview of switchcore ports and their properties.\n"
+	      "\n"
+	      "  atu\n"
+	      "    Displays the contents of the ATU with VLAN and port vectors.\n"
+	      "\n"
+	      "  vtu\n"
+	      "    Displays the contents of the VTU with FID and port mappings.\n"
+	      "    Port VLAN membership states: (u)ntagged, (t)agged, =CPU, (D)SA\n"
+	      "\n"
+	      "  pvt [INDEX]\n"
+	      "    Displays the contents of the Port VLAN Table, optionally on the\n"
+	      "    given switchcore index, by default index 0 is shown."
+	      "\n"
+	      "By default, mvls displays an overview of the VTU, ATU and ports.\n"
+	      , stdout);
+
+	return rc;
+}
+
 int main(int argc, char **argv)
 {
 	struct env env;
@@ -750,6 +776,9 @@ int main(int argc, char **argv)
 		env_show_atu(&env); puts("");
 		env_show_ports(&env);
 	}
+
+	if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "help"))
+		return usage(0);
 
 	if (!strcmp(argv[1], "port"))
 		env_show_ports(&env);
