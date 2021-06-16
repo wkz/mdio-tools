@@ -749,6 +749,7 @@ int main(int argc, char **argv)
 		env_show_vtu(&env); puts("");
 		env_show_atu(&env); puts("");
 		env_show_ports(&env);
+		return 0;
 	}
 
 	if (!strcmp(argv[1], "port"))
@@ -761,13 +762,17 @@ int main(int argc, char **argv)
 		struct dev *dev;
 		int index;
 
-		if (argc == 2)
+		if (argc == 2) {
 			env_show_pvt(&env);
+			return 0;
+		}
 
 		index = strtol(argv[2], NULL, 0);
 		dev = env_dev_get(&env, index);
-		if (!dev)
+		if (!dev) {
 			fprintf(stderr, "ERROR: Unknown device index \"%s\".\n", argv[2]);
+			return 1;
+		}
 
 		dev_show_pvt(dev);
 	}
