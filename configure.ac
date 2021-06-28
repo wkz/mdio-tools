@@ -1,7 +1,7 @@
 AC_PREREQ(2.61)
 AC_INIT(mdio-tools, m4_esyscmd_s(git describe --always --dirty),
 	https://github.com/wkz/mdio-tools/issues)
-
+AC_CONFIG_AUX_DIR(aux)
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)
 
