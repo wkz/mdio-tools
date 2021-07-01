@@ -1,1 +1,15 @@
 *~
+aclocal.m4
+autom4te.cache/
+aux/
+config.h
+config.h.in
+config.log
+config.status
+configure
+GPATH
+GRTAGS
+GTAGS
+Makefile
+Makefile.in
+stamp-h1
