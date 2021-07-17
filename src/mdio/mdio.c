@@ -184,7 +184,7 @@ err_invalid:
 	return EINVAL;
 }
 
-static char buf[0x1000];
+static char buf[0x1000] __attribute__ ((aligned (NLMSG_ALIGNTO)));
 static const size_t len = 0x1000;
 static uint16_t mdio_family;
 
