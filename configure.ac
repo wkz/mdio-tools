@@ -8,6 +8,7 @@ AM_SILENT_RULES(yes)
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([
 	Makefile
+	include/Makefile
 	src/Makefile
 	src/mdio/Makefile
 	src/mvls/Makefile
