@@ -1,5 +1,8 @@
+#include "config.h"
+
 #include <err.h>
 #include <errno.h>
+#include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -761,10 +764,13 @@ int env_show_pvt(struct env *env)
 
 int usage(int rc)
 {
-	fputs("Usage: mvls [CMD]\n"
+	fputs("Usage: mvls [OPT] [CMD]\n"
+	      "\n"
+	      "Options:\n"
+	      "  -h   This help text\n"
+	      "  -v   Show verision and contact information\n"
 	      "\n"
 	      "Commands:\n"
-	      "\n"
 	      "  port\n"
 	      "    Displays and overview of switchcore ports and their properties.\n"
 	      "\n"
@@ -777,7 +783,7 @@ int usage(int rc)
 	      "\n"
 	      "  pvt [INDEX]\n"
 	      "    Displays the contents of the Port VLAN Table, optionally on the\n"
-	      "    given switchcore index, by default index 0 is shown."
+	      "    given switchcore index, by default index 0 is shown.\n"
 	      "\n"
 	      "By default, mvls displays an overview of the VTU, ATU and ports.\n"
 	      , stdout);
@@ -788,37 +794,50 @@ int usage(int rc)
 int main(int argc, char **argv)
 {
 	struct env env;
+	int c;
+
+	while ((c = getopt(argc, argv, "hv")) != EOF) {
+		switch (c) {
+		case 'h':
+			return usage(0);
+
+		case 'v':
+			puts("v" PACKAGE_VERSION);
+			puts("\nBug report address: " PACKAGE_BUGREPORT);
+			return 0;
+
+		default:
+			return usage(1);
+		}
+	}
 
 	if (env_init(&env))
 		err(1, "failed discovering any devices");
 
-	if (argc == 1) {
+	if (optind == argc) {
 		env_show_vtu(&env); puts("");
 		env_show_atu(&env); puts("");
 		env_show_ports(&env);
 		return 0;
 	}
 
-	if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "help"))
-		return usage(0);
-
-	if (!strcmp(argv[1], "port"))
+	if (!strcmp(argv[optind], "port"))
 		env_show_ports(&env);
-	if (!strcmp(argv[1], "atu"))
+	if (!strcmp(argv[optind], "atu"))
 		env_show_atu(&env);
-	if (!strcmp(argv[1], "vtu"))
+	if (!strcmp(argv[optind], "vtu"))
 		env_show_vtu(&env);
-	if (!strcmp(argv[1], "pvt")) {
+	if (!strcmp(argv[optind], "pvt")) {
 		struct dev *dev;
 		int index;
 
-		if (argc == 2)
+		if (++optind == argc)
 			return env_show_pvt(&env);
 
-		index = strtol(argv[2], NULL, 0);
+		index = strtol(argv[optind], NULL, 0);
 		dev = env_dev_get(&env, index);
 		if (!dev)
-			err(1, "unknown device index \"%s\"", argv[2]);
+			err(1, "unknown device index \"%s\"", argv[optind]);
 
 		dev_show_pvt(dev);
 	}
