@@ -1,5 +1,5 @@
 SUBDIRS         = src include
-doc_DATA        = README.md COPYING
+doc_DATA        = README.md ChangeLog.md COPYING
 EXTRA_DIST      = $(doc_DATA)
 DISTCLEANFILES  = *~ *.d
 ACLOCAL_AMFLAGS = -I m4
