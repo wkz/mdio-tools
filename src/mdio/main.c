@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,9 +7,13 @@
 
 #include "mdio.h"
 
-void usage(FILE *fp)
+int usage(int rc, FILE *fp)
 {
-	fputs("Usage: mdio [OBJ] OP\n"
+	fputs("Usage: mdio [OPT] [OBJ] OP\n"
+	      "\n"
+	      "Options:\n"
+	      "  -h   This help text\n"
+	      "  -v   Show verision and contact information\n"
 	      "\n"
 	      "Operations:\n"
 	      "\n"
@@ -18,7 +24,10 @@ void usage(FILE *fp)
 	      "    against \"fixed-0\".\n"
 	      "\n"
 	      "  help\n"
-	      "    Show this usage message.\n"
+	      "    Show this help text.\n"
+	      "\n"
+	      "  version\n"
+	      "    Show version and contact information.\n"
 	      "\n"
  	      "  OBJ dump [RANGE]\n"
 	      "    Dump multiple registers from OBJ. If no range is specified, dump 64\n"
@@ -53,19 +62,40 @@ void usage(FILE *fp)
 	      "    REG: u32 (Stride of 2, only even registers are valid)\n"
 	      "    VAL: u16\n"
 	      , fp);
+
+	return rc;
 }
 
 int help_exec(int argc, char **argv)
 {
-	usage(stdout);
-	return 0;
+	return usage(0, stdout);
 }
 DEFINE_CMD(help, help_exec);
+
+int vers_exec(int argc, char **argv)
+{
+	puts("v" PACKAGE_VERSION);
+	puts("\nBug report address: " PACKAGE_BUGREPORT);
+
+	return 0;
+}
+DEFINE_CMD(version, vers_exec);
 
 int main(int argc, char **argv)
 {
 	struct cmd *cmd;
 	char *arg;
+
+	argv_pop(&argc, &argv);
+
+	arg = argv_peek(argc, argv);
+	if (!arg)
+		return usage(1, stderr);
+
+	if (!strcmp(arg, "-h"))
+		return help_exec(argc, argv);
+	if (!strcmp(arg, "-v"))
+		return vers_exec(argc, argv);
 
 	if (mdio_modprobe())
 		fprintf(stderr, "WARN: mdio-netlink module not detected, "
@@ -76,19 +106,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	argv_pop(&argc, &argv);
-
-	arg = argv_peek(argc, argv);
-	if (!arg) {
-		usage(stderr);
-		return 1;
-	}
-
 	for (cmd = &__start_cmds; cmd < &__stop_cmds; cmd++) {
 		if (!strcmp(cmd->name, arg))
 			return cmd->exec(argc, argv) ? 1 : 0;
 	}
 
-	usage(stderr);
-	return 1;
+	return usage(1, stderr);
 }
