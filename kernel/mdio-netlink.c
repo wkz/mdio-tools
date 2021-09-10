@@ -87,63 +87,6 @@ static inline u16 __arg_ri(u32 arg, u16 *regs)
 	}
 }
 
-static inline void mdio_nl_insn_dump_arg(u32 arg)
-{
-	switch ((enum mdio_nl_argmode)(arg >> 16)) {
-	case MDIO_NL_ARG_NONE:
-		return;
-	case MDIO_NL_ARG_IMM:
-		pr_cont("%#6x  ", arg & 0xffff);
-		return;
-	case MDIO_NL_ARG_REG:
-		pr_cont("    r%d  ", arg & 0xffff);
-		return;
-	default:
-		pr_cont("UNKNOWN(0x%x)  ", arg);
-	}
-}
-
-static inline void mdio_nl_insn_dump(const struct mdio_nl_insn *insn, int pc)
-{
-	/* return; */
-
-	pr_emerg("%3d: ", pc);
-
-	switch (insn->op) {
-	case MDIO_NL_OP_READ:
-		pr_cont("rd   ");
-		break;
-	case MDIO_NL_OP_WRITE:
-		pr_cont("wr   ");
-		break;
-	case MDIO_NL_OP_AND:
-		pr_cont("and  ");
-		break;
-	case MDIO_NL_OP_OR:
-		pr_cont("or   ");
-		break;
-	case MDIO_NL_OP_ADD:
-		pr_cont("add  ");
-		break;
-	case MDIO_NL_OP_JEQ:
-		pr_cont("jeq  ");
-		break;
-	case MDIO_NL_OP_JNE:
-		pr_cont("jne  ");
-		break;
-	case MDIO_NL_OP_EMIT:
-		pr_cont("emit ");
-		break;
-	default:
-		pr_cont("UNKNOWN(%d) ", insn->op);
-	}
-
-	mdio_nl_insn_dump_arg(insn->arg0);
-	mdio_nl_insn_dump_arg(insn->arg1);
-	mdio_nl_insn_dump_arg(insn->arg2);
-	pr_cont("\n");
-}
-
 static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 {
 	struct mdio_nl_insn *insn;
@@ -161,11 +104,8 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 	     insn = &xfer->prog[++pc]) {
 		if (time_after(jiffies, timeout)) {
 			ret = -ETIMEDOUT;
-			/* pr_emerg("\tTIME!\n"); */
 			break;
 		}
-
-		/* mdio_nl_insn_dump(insn, pc); */
 
 		switch ((enum mdio_nl_op)insn->op) {
 		case MDIO_NL_OP_READ:
@@ -177,7 +117,6 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 			if (ret < 0)
 				goto exit;
 			*__arg_r(insn->arg2, regs) = ret;
-			/* pr_emerg("\t= %#x\n", *__arg_r(insn->arg2, regs)); */
 			ret = 0;
 			break;
 
@@ -331,7 +270,6 @@ static int mdio_nl_validate_prog(const struct nlattr *attr,
 
 	len /= sizeof(*prog);
 	for (i = 0; i < len; i++) {
-		/* mdio_nl_insn_dump(&prog[i], i); */
 		err = mdio_nl_validate_insn(attr, extack, &prog[i]);
 		if (err) {
 			break;
