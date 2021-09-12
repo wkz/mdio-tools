@@ -1,6 +1,8 @@
 #ifndef __MDIO_NETLINK_H__
 #define __MDIO_NETLINK_H__
 
+#include <linux/types.h>
+
 enum {
 	MDIO_GENL_UNSPEC,
 	MDIO_GENL_XFER,

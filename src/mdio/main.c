@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/mdio.h>
+#include <unistd.h>
 
 #include "mdio.h"
 
@@ -69,36 +69,37 @@ int usage(int rc, FILE *fp)
 	return rc;
 }
 
-int help_exec(int argc, char **argv)
-{
-	return usage(0, stdout);
-}
-DEFINE_CMD(help, help_exec);
-
-int vers_exec(int argc, char **argv)
+int version(void)
 {
 	puts("v" PACKAGE_VERSION);
 	puts("\nBug report address: " PACKAGE_BUGREPORT);
 
 	return 0;
 }
-DEFINE_CMD(version, vers_exec);
 
 int main(int argc, char **argv)
 {
 	struct cmd *cmd;
 	char *arg;
+	int opt;
 
-	argv_pop(&argc, &argv);
+	while ((opt = getopt(argc, argv, "hv")) != -1) {
+		switch (opt) {
+		case 'h':
+			return usage(0, stdout);
+		case 'v':
+			return version();
+		default:
+			return usage(1, stderr);
+		}
+	}
+
+	argv += optind;
+	argc -= optind;
 
 	arg = argv_peek(argc, argv);
 	if (!arg)
 		return usage(1, stderr);
-
-	if (!strcmp(arg, "-h"))
-		return help_exec(argc, argv);
-	if (!strcmp(arg, "-v"))
-		return vers_exec(argc, argv);
 
 	if (mdio_modprobe())
 		fprintf(stderr, "WARN: mdio-netlink module not detected, "
