@@ -49,7 +49,7 @@ static inline char *argv_pop(int *argcp, char ***argvp)
 
 struct cmd {
 	const char *name;
-	int (*exec)(int argc, char **argv);
+	int (*exec)(const char *bus, int argc, char **argv);
 };
 
 #define DEFINE_CMD(_name, _exec) \
@@ -112,7 +112,7 @@ struct mdio_driver;
 
 struct mdio_device {
 	const struct mdio_driver *driver;
-	char *bus;
+	const char *bus;
 
 	struct {
 		uint32_t max;
@@ -136,5 +136,8 @@ struct mdio_driver {
 };
 
 int mdio_common_exec(struct mdio_device *dev, int argc, char **argv);
+
+int bus_status(const char *bus);
+int bus_list(void);
 
 #endif	/* _LIBMDIO_H */

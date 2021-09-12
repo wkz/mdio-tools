@@ -75,10 +75,11 @@ int phy_exec_status(struct phy_device *pdev, int argc, char **argv)
 	return 0;
 }
 
-int phy_exec(int argc, char **argv)
+int phy_exec(const char *bus, int argc, char **argv)
 {
 	struct phy_device pdev = {
 		.dev = {
+			.bus = bus,
 			.driver = &phy_driver,
 
 			.mem = {
@@ -90,10 +91,6 @@ int phy_exec(int argc, char **argv)
 	char *arg;
 
 	argv_pop(&argc, &argv);
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_bus(arg, &pdev.dev.bus))
-		return 1;
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &pdev.id, true))

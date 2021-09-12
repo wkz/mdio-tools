@@ -5,7 +5,7 @@
 
 #include "mdio.h"
 
-int bus_status_cb(uint32_t *data, int len, int err, void *_null)
+static int bus_status_cb(uint32_t *data, int len, int err, void *_null)
 {
 	uint16_t dev;
 
@@ -52,27 +52,14 @@ int bus_status(const char *bus)
 	return 0;
 }
 
-int bus_list_cb(const char *bus, void *_null)
+static int bus_list_cb(const char *bus, void *_null)
 {
 	puts(bus);
 	return 0;
 }
 
-int bus_exec(int argc, char **argv)
+int bus_list(void)
 {
-	char *arg, *bus;
-
-	argv_pop(&argc, &argv);
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg) {
-		mdio_for_each("*", bus_list_cb, NULL);
-		return 0;
-	}
-
-	if (mdio_parse_bus(arg, &bus))
-		return 1;
-
-	return bus_status(bus);
+	mdio_for_each("*", bus_list_cb, NULL);
+	return 0;
 }
-DEFINE_CMD(bus, bus_exec);

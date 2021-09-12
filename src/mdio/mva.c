@@ -168,10 +168,11 @@ int mva_exec_status(struct mva_device *pdev, int argc, char **argv)
 	return 0;
 }
 
-int mva_exec(int argc, char **argv)
+int mva_exec(const char *bus, int argc, char **argv)
 {
 	struct mva_device pdev = {
 		.dev = {
+			.bus = bus,
 			.driver = &mva_driver,
 
 			.mem = {
@@ -183,10 +184,6 @@ int mva_exec(int argc, char **argv)
 	char *arg;
 
 	argv_pop(&argc, &argv);
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_bus(arg, &pdev.dev.bus))
-		return 1;
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &pdev.id, true))

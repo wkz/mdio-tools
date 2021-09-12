@@ -157,10 +157,11 @@ struct mdio_driver mvls_driver = {
 	.parse_reg = mvls_parse_reg,
 };
 
-static int mvls_exec(int argc, char **argv)
+static int mvls_exec(const char *bus, int argc, char **argv)
 {
 	struct mvls_device mdev = {
 		.dev = {
+			.bus = bus,
 			.driver = &mvls_driver,
 
 			.mem = {
@@ -172,10 +173,6 @@ static int mvls_exec(int argc, char **argv)
 	char *arg;
 
 	argv_pop(&argc, &argv);
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_bus(arg, &mdev.dev.bus))
-		return 1;
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &mdev.id, true))

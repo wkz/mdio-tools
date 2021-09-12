@@ -42,10 +42,11 @@ static const struct mdio_driver xrs_driver = {
 	.write = xrs_write,
 };
 
-int xrs_exec(int argc, char **argv)
+int xrs_exec(const char *bus, int argc, char **argv)
 {
 	struct xrs_device xdev = {
 		.dev = {
+			.bus = bus,
 			.driver = &xrs_driver,
 
 			.mem = {
@@ -58,10 +59,6 @@ int xrs_exec(int argc, char **argv)
 	char *arg;
 
 	argv_pop(&argc, &argv);
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_bus(arg, &xdev.dev.bus))
-		return 1;
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &xdev.id, true))
