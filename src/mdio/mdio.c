@@ -286,57 +286,6 @@ void mdio_prog_push(struct mdio_prog *prog, struct mdio_nl_insn insn)
 	memcpy(&prog->insns[prog->len - 1], &insn, sizeof(insn));
 }
 
-
-int mdio_dump_cb(uint32_t *data, int len, int err, void *_null)
-{
-	for (; len; len--, data++)
-		printf("0x%4.4x\n", *data);
-
-	return err;
-}
-
-int mdio_dump_exec(struct mdio_ops *ops, int argc, char **argv)
-{
-	struct mdio_prog prog = MDIO_PROG_EMPTY;
-	uint16_t dev, reg = 0, end = 31;
-	int err;
-
-	if (!argc) {
-		ops->usage(stderr);
-		return 1;
-	}
-
-	if (mdio_parse_dev(argv[0], &dev, true))
-		return 1;
-
-	if (argc > 1) {
-		if (mdio_parse_reg_range(argv[1], &reg, &end, dev & MDIO_PHY_ID_C45))
-			return 1;
-	} else if (dev & MDIO_PHY_ID_C45) {
-		reg = 0;
-		end = 127;
-	}
-
-	for (; reg <= end; reg++) {
-		/* TODO: If dev/reg could be REG(X) we would not have
-		 * to unroll the loop here. */
-		err = ops->push_read(ops, &prog, dev, reg);
-		if (err)
-			return err;
-		mdio_prog_push(&prog, INSN(EMIT,  REG(0),   0,         0));
-	}
-
-	err = mdio_xfer(ops->bus, &prog, mdio_dump_cb, NULL);
-	free(prog.insns);
-	if (err) {
-		fprintf(stderr, "ERROR: Dump failed (%d)\n", err);
-		return 1;
-	}
-
-	return 0;
-}
-
-
 int mdio_raw_read_cb(uint32_t *data, int len, int err, void *_null)
 {
 	if (len != 1)

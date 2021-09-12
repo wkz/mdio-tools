@@ -98,7 +98,6 @@ struct mdio_ops {
 			  uint16_t dev, uint16_t reg, uint32_t val);
 };
 
-int mdio_dump_exec(struct mdio_ops *ops, int argc, char **argv);
 int mdio_raw_exec (struct mdio_ops *ops, int argc, char **argv);
 
 int mdio_xfer(const char *bus, struct mdio_prog *prog,
