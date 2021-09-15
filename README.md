@@ -16,47 +16,6 @@ few important ways:
   result, things like read/mask/write operations and accesses to paged
   PHYs can be performed safely.
 
-```
-Usage: mdio COMMAND OPTIONS
-
-Device agnostic commands:
-
-  help
-    Show this usage message.
-
-  list [BUS]
-    List buses matching BUS, or all if not specified.
-
-  dump BUS [PORT:]DEV [REG[-REG|+NUM]]
-    Dump multiple registers. For Clause 22 devices, all registers are
-    dumped by default. For Clause 45 the default range is [0-127].
-
-  raw BUS [PORT:]DEV REG [VAL[/MASK]]
-    Raw register access. Without VAL, REG is read. An unmasked VAL will
-    do a single write to REG. A masked VAL will perform a read/mask/write
-    sequence.
-
-Device specific commands:
-
-  mv6
-    Commands related to Marvell's MV88E6xxx series of Ethernet switches.
-
-Common options:
-  BUS           The ID of an MDIO bus. Use 'mdio list' to see available
-                buses. Uses glob(3) matching to locate bus, i.e. "fixed*"
-                would typically match against "fixed-0".
-
-  [PORT:]DEV    MDIO device address, either a single 5-bit integer for a
-                Clause 22 address, or PORT:DEV for a Clause 45 ditto.
-
-  REG           Register address, a single 5-bit integer for a Clause 22
-                access, or 16 bits for Clause 45.
-
-  VAL[/MASK]    Register value, 16 bits. Optionally masked using VAL/MASK
-                which will read/mask/write the referenced register.
-```
-
-
 Build
 -----
 
