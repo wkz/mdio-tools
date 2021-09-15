@@ -16,6 +16,59 @@ few important ways:
   result, things like read/mask/write operations and accesses to paged
   PHYs can be performed safely.
 
+```
+Usage:
+    mdio            -- List available buses
+    mdio BUS        -- Probe BUS for active devices
+    mdio BUS OBJ    -- Show status of OBJ
+    mdio BUS OBJ OP -- Perform OP on OBJ
+
+Options:
+  -h   This help text
+  -v   Show verision and contact information
+
+Bus names may be abbreviated using glob(3) syntax, i.e. "fixed*"
+would typically match against "fixed-0".
+
+Objects:
+  phy PHYAD
+    Clause 22 (MDIO) PHY using address PHYAD.
+
+    REG: u5
+
+  mmd PRTAD[:DEVAD]
+    Clause 45 (XMDIO) PHY using address PRTAD:DEVAD.
+
+    REG: u16
+
+  mva PHYAD
+    Operate on Marvell Alaska (mv88e8xxx) PHY using address PHYAD.
+    Register 22 is assumed to be the page register.
+
+    REG: u8|"copper"|"fiber":u5
+
+  mvls ID
+    Operate on Marvell LinkStreet (mv88e6xxx) device attached to BUS
+    using address ID. If ID is 0, single-chip addressing is used; all
+    other IDs use multi-chip addressing.
+
+    REG: u5|"global1"|"global2" u5
+
+  xrs PHYAD
+    Operate of Arrow/Flexibilis XRS700x device using address PHYAD.
+
+    REG: u32 (Stride of 2, only even registers are valid)
+
+Operations:
+  raw REG [DATA[/MASK]]
+    Raw register access. Without DATA, REG is read. An unmasked DATA will
+    do a single write to REG. A masked DATA will perform a read/mask/write
+    sequence.
+
+    DATA: u16
+    MASK: u16
+```
+
 Build
 -----
 
