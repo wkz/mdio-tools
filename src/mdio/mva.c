@@ -61,8 +61,8 @@ int mva_write(struct mdio_device *dev, struct mdio_prog *prog,
 static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 			 uint32_t *regs, uint32_t *rege)
 {
+	char *str, *tok, *end;
 	unsigned long r;
-	char *str, *end;
 	uint8_t page;
 
 	if (rege) {
@@ -71,17 +71,18 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 	}
 
 	str = argv_pop(argcp, argvp);
-	if (!str) {
-		fprintf(stderr, "ERROR: Expected page");
+	tok = str ? strtok(str, ":") : NULL;
+	if (!tok) {
+		fprintf(stderr, "ERROR: PAGE:REG");
 		return EINVAL;
-	} else if (!strcmp(str, "copper") || !strcmp(str, "cu")) {
+	} else if (!strcmp(tok, "copper") || !strcmp(tok, "cu")) {
 		page = MVA_PAGE_COPPER;
-	} else if (!strcmp(str, "fiber") || !strcmp(str, "fibre")) {
+	} else if (!strcmp(tok, "fiber") || !strcmp(tok, "fibre")) {
 		page = MVA_PAGE_FIBER;
 	} else {
-		r = strtoul(str, &end, 0);
+		r = strtoul(tok, &end, 0);
 		if (*end) {
-			fprintf(stderr, "ERROR: \"%s\" is not a valid page\n", str);
+			fprintf(stderr, "ERROR: \"%s\" is not a valid page\n", tok);
 			return EINVAL;
 		}
 
@@ -93,16 +94,16 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 		page = r;
 	}
 
-	str = argv_pop(argcp, argvp);
-	if (!str) {
-		fprintf(stderr, "ERROR: Expected register");
+	tok = strtok(NULL, ":");
+	if (!tok) {
+		fprintf(stderr, "ERROR: Expected REG");
 		return EINVAL;
 	}
 
-	r = strtoul(str, &end, 0);
+	r = strtoul(tok, &end, 0);
 	if (*end) {
 		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n",
-			str);
+			tok);
 		return EINVAL;
 	}
 
@@ -182,8 +183,6 @@ int mva_exec(const char *bus, int argc, char **argv)
 		},
 	};
 	char *arg;
-
-	argv_pop(&argc, &argv);
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &pdev.id, true))

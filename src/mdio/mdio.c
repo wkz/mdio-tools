@@ -52,7 +52,7 @@ int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45)
 		goto err_invalid;
 
 	if (!allow_c45) {
-		fprintf(stderr, "ERROR: Clause-45 addressing not allowed");
+		fprintf(stderr, "ERROR: Clause-45 addressing not allowed\n");
 		return EINVAL;
 	}
 
@@ -61,13 +61,13 @@ int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45)
 		goto err_invalid;
 
 	if (allow_c45 && (d > 31)) {
-		fprintf(stderr, "ERROR: Device %lu is out of range [0-31]", d);
+		fprintf(stderr, "ERROR: Device %lu is out of range [0-31]\n", d);
 		return ERANGE;
 	}
 
 c22:
 	if (p > 31) {
-		fprintf(stderr, "ERROR: %s %lu is out of range [0-31]",
+		fprintf(stderr, "ERROR: %s %lu is out of range [0-31]\n",
 			allow_c45 ? "Port" : "Device", d);
 		return ERANGE;
 	}
@@ -76,7 +76,7 @@ c22:
 	return 0;
 
 err_invalid:
-	fprintf(stderr, "ERROR: \"%s\" is not a valid device", str);
+	fprintf(stderr, "ERROR: \"%s\" is not a valid device\n", str);
 	return EINVAL;
 }
 
@@ -476,8 +476,6 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 	uint32_t reg, val, mask;
 	int err;
 
-	argv_pop(&argc, &argv);
-
 	err = mdio_device_parse_reg(dev, &argc, &argv, &reg, NULL);
 	if (err)
 		return err;
@@ -530,10 +528,12 @@ int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 	if (!argc)
 		return 1;
 
-	if (!strcmp(argv[0], "raw"))
+	if (!strcmp(argv[0], "raw")) {
+		argv_pop(&argc, &argv);
 		return mdio_common_raw_exec(dev, argc, argv);
+	}
 
-	return 1;
+	return mdio_common_raw_exec(dev, argc, argv);
 }
 
 

@@ -96,8 +96,8 @@ static int mvls_write(struct mdio_device *dev, struct mdio_prog *prog,
 static int mvls_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 			  uint32_t *regs, uint32_t *rege)
 {
+	char *str, *tok, *end;
 	unsigned long r;
-	char *str, *end;
 	uint16_t port;
 
 	if (rege) {
@@ -106,38 +106,41 @@ static int mvls_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 	}
 
 	str = argv_pop(argcp, argvp);
-	if (!str) {
-		fprintf(stderr, "ERROR: Expected port");
+	tok = str ? strtok(str, ":") : NULL;
+	if (!tok) {
+		fprintf(stderr, "ERROR: Expected PORT:REG");
 		return EINVAL;
-	} else if (!strcmp(str, "global1") || !strcmp(str, "g1")) {
+	}
+
+	if (!strcmp(tok, "global1") || !strcmp(tok, "g1")) {
 		port = MVLS_G1;
-	} else if (!strcmp(str, "global2") || !strcmp(str, "g2")) {
-		port = MVLS_G1;
+	} else if (!strcmp(tok, "global2") || !strcmp(tok, "g2")) {
+		port = MVLS_G2;
 	} else {
-		r = strtoul(str, &end, 0);
+		r = strtoul(tok, &end, 0);
 		if (*end) {
-			fprintf(stderr, "ERROR: \"%s\" is not a valid port\n", str);
+			fprintf(stderr, "ERROR: \"%s\" is not a valid port\n", tok);
 			return EINVAL;
 		}
 
 		if (r > 31) {
-			fprintf(stderr, "ERROR: port %lu is out of range [0-31]\n", r);
+			fprintf(stderr, "ERROR: Port %lu is out of range [0-31]\n", r);
 			return EINVAL;
 		}
 
 		port = r;
 	}
 
-	str = argv_pop(argcp, argvp);
-	if (!str) {
-		fprintf(stderr, "ERROR: Expected register");
+	tok = strtok(NULL, ":");
+	if (!tok) {
+		fprintf(stderr, "ERROR: Expected REG");
 		return EINVAL;
 	}
 
-	r = strtoul(str, &end, 0);
+	r = strtoul(tok, &end, 0);
 	if (*end) {
 		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n",
-			str);
+			tok);
 		return EINVAL;
 	}
 
@@ -171,8 +174,6 @@ static int mvls_exec(const char *bus, int argc, char **argv)
 		},
 	};
 	char *arg;
-
-	argv_pop(&argc, &argv);
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &mdev.id, true))

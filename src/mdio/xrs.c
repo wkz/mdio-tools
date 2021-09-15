@@ -58,8 +58,6 @@ int xrs_exec(const char *bus, int argc, char **argv)
 	};
 	char *arg;
 
-	argv_pop(&argc, &argv);
-
 	arg = argv_pop(&argc, &argv);
 	if (!arg || mdio_parse_dev(arg, &xdev.id, true))
 		return 1;

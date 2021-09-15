@@ -85,18 +85,15 @@ int phy_exec(const char *bus, int argc, char **argv)
 			.mem = {
 				.stride = 1,
 				.width = 16,
+				.max = 31,
 			},
 		},
 	};
 	char *arg;
 
-	argv_pop(&argc, &argv);
-
 	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_dev(arg, &pdev.id, true))
+	if (!arg || mdio_parse_dev(arg, &pdev.id, false))
 		return 1;
-
-	pdev.dev.mem.max = (pdev.id & MDIO_PHY_ID_C45) ? UINT16_MAX : 31;
 
 	arg = argv_peek(argc, argv);
 	if (!arg || !strcmp(arg, "status"))
@@ -105,3 +102,32 @@ int phy_exec(const char *bus, int argc, char **argv)
 	return mdio_common_exec(&pdev.dev, argc, argv);
 }
 DEFINE_CMD(phy, phy_exec);
+
+int mmd_exec(const char *bus, int argc, char **argv)
+{
+	struct phy_device pdev = {
+		.dev = {
+			.bus = bus,
+			.driver = &phy_driver,
+
+			.mem = {
+				.stride = 1,
+				.width = 16,
+				.max = UINT16_MAX,
+			},
+		},
+	};
+	char *arg;
+
+	arg = argv_pop(&argc, &argv);
+	if (!arg || mdio_parse_dev(arg, &pdev.id, true))
+		return 1;
+
+	if (!(pdev.id & MDIO_PHY_ID_C45)) {
+		fprintf(stderr, "ERROR: Expected Clause 24 (PRTAD:DEVAD) address\n");
+		return 1;
+	}
+
+	return mdio_common_exec(&pdev.dev, argc, argv);
+}
+DEFINE_CMD(mmd, mmd_exec);

@@ -140,4 +140,7 @@ int mdio_common_exec(struct mdio_device *dev, int argc, char **argv);
 int bus_status(const char *bus);
 int bus_list(void);
 
+int phy_exec(const char *bus, int argc, char **argv);
+int mmd_exec(const char *bus, int argc, char **argv);
+
 #endif	/* _LIBMDIO_H */

@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 
 	arg = argv_pop(&argc, &argv);
 	if (!arg)
-		return bus_list();
+		return bus_list() ? 1 : 0;
 
 	if (mdio_parse_bus(arg, &bus)) {
 		fprintf(stderr, "ERROR: \"%s\" does not match any known bus.\n",
@@ -119,12 +119,19 @@ int main(int argc, char **argv)
 
 	arg = argv_peek(argc, argv);
 	if (!arg)
-		return bus_status(bus);
+		return bus_status(bus) ? 1 : 0;
 
 	for (cmd = &__start_cmds; cmd < &__stop_cmds; cmd++) {
-		if (!strcmp(cmd->name, arg))
+		if (!strcmp(cmd->name, arg)) {
+			argv_pop(&argc, &argv);
 			return cmd->exec(bus, argc, argv) ? 1 : 0;
+		}
 	}
 
-	return usage(1, stderr);
+	/* Allow the driver name to be omitted in the common phy/mmd
+	 * case. */
+	if (strchr(arg, ':'))
+		return mmd_exec(bus, argc, argv) ? 1 : 0;
+	else
+		return phy_exec(bus, argc, argv) ? 1 : 0;
 }
