@@ -1,0 +1,208 @@
+.Dd September 13, 2021
+.Dt MDIO 8 SMM
+.Os Linux
+.Sh NAME
+.Nm mdio
+.Nd Direct MDIO bus access
+.Sh SYNOPSIS
+.Nm mdio
+.Op Ar bus Op Ar device Op Ar operation
+.Nm mdio
+.Op Fl h | Fl v
+.Sh DESCRIPTION
+Without any arguments, all available MDIO buses are listed. Supplying only
+.Ar bus
+(see
+.Sx Buses )
+will list any Clause 22 addressable devices on it. Omitting
+.Ar operation
+prints a brief status message for the
+.Ar device
+(see
+.Sx Devices )
+if the driver supports it. Otherwise, perform
+.Ar operation
+(see
+.Sx Operations )
+on
+.Ar device
+attached to
+.Ar bus
+.Ss Options
+.Bl -tag
+.It Fl h
+Print usage message and exit.
+.It Fl v
+Print version information and exit.
+.El
+.Ss Buses
+Denoted by their sysfs names as listed in
+.Pa /sys/class/mdio_bus/ .
+As these are typically very awkward to type,
+.Xr glob 3
+patterns may be used to abbreviate them (see
+.Sx EXAMPLES )
+.Ss Devices
+Multiple types of devices are supported via pluggable
+drivers. Different devices will use different addressing schemes. If
+you are unsure about which type of device you have, using the
+.Cm phy
+driver is probably a good bet if your PHY runs at speeds \(<= 1 Gbps. If your PHY is capable of speeds > 1
+Gbps, you will most likely want to use the
+.Cm mmd
+driver.
+.Pp
+The following devices are supported:
+.Bl -tag -offset 2n
+.It Cm phy Ar PHYAD
+Clause 22 (MDIO) PHY using address
+.Ar PHYAD .
+.Pp
+.Bl -tag -compact
+.It Ar PHYAD
+:= 0-31
+.It Ar REG
+:= 0-31
+.El
+.It Cm mmd Ar PRTAD:DEVAD
+Clause 45 (XMDIO) MMD using address
+.Ar PRTAD:DEVAD .
+.Pp
+.Bl -tag -compact
+.It Ar PRTAD
+:= 0-31
+.It Ar DEVAD
+:= 0-31
+.It Ar REG
+:= 0-0xffff
+.El
+.It Cm mva Ar PHYAD
+Marvell Alaska (mv88e1xxx) paged PHY. Register 22 is a paging register
+used to expand the register space.
+.Pp
+.Bl -tag -compact
+.It Ar PHYAD
+:= 0-31
+.It Ar REG
+:= PAGE:0-31
+.It Ar PAGE
+:= 0-255|copper|fiber
+.El
+.It Cm mvls Ar ID
+Marvell LinkStreet (mv88e6xxx) Ethernet switch. If ID = 0, single-chip
+addressing is used; if ID \(!= 0, multi-chip addressing is used.
+.Pp
+.Bl -tag -compact
+.It Ar ID
+:= 0-31
+.It Ar REG
+:= PORT:0-31
+.It Ar PORT
+:= 0-31|g1|g2
+.El
+.It Cm xrs Ar PHYAD
+Arrow/Flexibilis XRS700x Ethernet switch. Register space has a stride
+of 2, i.e. only even numbered registers are valid.
+.Pp
+.Bl -tag -compact
+.It Ar PHYAD
+:= 0-31
+.It Ar REG
+:= 0-0xffffffff
+.El
+.El
+.Ss Operations
+The following operations are supported:
+.Bl -tag -offset 2n
+.It Cm raw Ar REG Op Ar DATA[/MASK]
+Raw register access. Without
+.Ar DATA ,
+.Ar REG
+is read.
+.Ar DATA
+without
+.Ar MASK
+will perform a single write to
+.Ar REG .
+.Ar DATA
+with
+.Ar MASK
+will perform a read/mask/write
+sequence.
+.Pp
+.Bl -tag -compact
+.It Ar REG
+Determined by the device type (see
+.Sx Devices )
+.It Ar DATA
+:= 0-0xffff
+.It Ar MASK
+:= 0-0xffff
+.El
+.El
+.Sh EXAMPLES
+.Pp
+Show all available buses:
+.Bd -literal -offset 2n
+~# mdio
+30be0000.ethernet-1
+fixed-0
+.Ed
+.Pp
+List all Clause 22 addressable devices on a bus (using
+.Xr glob 3
+pattern to abbreviate bus name):
+.Bd -literal -offset 2n
+~# mdio 3*
+ DEV      PHY-ID  LINK
+0x01  0x01410dd0  up
+.Ed
+.Pp
+Read register 2 from PHY 1:
+.Bd -literal -offset 2n
+~# mdio 3* phy 1 raw 2
+0x0141
+.Ed
+.Pp
+Perform a reset on PHY 1:
+.Bd -literal -offset 2n
+~# mdio 3* phy 1 raw 0 0x8000/0x7fff
+.Ed
+.Pp
+Read register 0x1000 from MMD 4 on PHY 9:
+.Bd -literal -offset 2n
+~# mdio 3* mmd 9:4 raw 0x1000
+0x2040
+.Ed
+.Pp
+Read status register from the copper page of an Alaska PHY:
+.Bd -literal -offset 2n
+~# mdio 3* mva 1 raw copper:1
+0x796d
+.Ed
+.Pp
+Set the device number, of LinkStreet switch 4, to 10:
+.Bd -literal -offset 2n
+~# mdio 3* mvls 4 raw g1:28 0xa/0xfff0
+.Ed
+.Sh SEE ALSO
+.Xr mvls 8
+.Xr mdio-netlink 9
+.Sh STANDARDS
+IEEE Std 802.3-2018
+.Bl -bullet -compact
+.It
+Clause 22 (MDIO)
+.It
+Clause 45 (XMDIO)
+.El
+.Sh AUTHORS
+.An Tobias Waldekranz Aq Mt tobias@waldekranz.com
+.Sh CAVEATS
+In addition to the userspace parts of
+.Xr mdio-tools 7 ,
+the
+.Xr mdio-netlink 9
+kernel module must be installed to use
+.Nm .
+
