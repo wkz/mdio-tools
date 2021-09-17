@@ -9,6 +9,7 @@ AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([
 	Makefile
 	include/Makefile
+	man/Makefile
 	src/Makefile
 	src/mdio/Makefile
 	src/mvls/Makefile
