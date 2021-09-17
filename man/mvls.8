@@ -1,0 +1,78 @@
+.Dd September 16, 2021
+.Dt MVLS 8 SMM
+.Os Linux
+.Sh NAME
+.Nm mvls
+.Nd Dump internal state of Marvell LinkStreet Ethernet switches
+.Sh SYNOPSIS
+.Nm
+.Op Cm port | Cm atu | Cm vtu | Cm pvt Op Ar DEV
+.Sh DESCRIPTION
+Without arguments,
+.Nm
+will dump the
+.Cm vtu , Cm atu , and Cm port
+tables.
+.Bl -tag -width 0
+.It Cm port
+List basic information about all ports on all switches on the system.
+.It Cm atu
+Dump all entries in the Address Translation Units (ATUs) of all
+devices on the system.
+.Qd ATU
+is a Marvell LinkStreet specific name for a Forwarding Database (FDB).
+.It Cm vtu
+Dump all entries in the VLAN Translation Units (VTUs) of all devices
+on the system. Each port will be in one of four states:
+.Bl -tag
+.It Cm .
+Not a member of the VLAN
+.It Cm u
+Member of the VLAN, traffic egresses untagged.
+.It Cm t
+Member of the VLAN, traffic egresses tagged.
+.It Cm =
+Member of the VLAN, traffic egresses unmodified.
+.El
+.It Cm pvt Op Ar DEV
+Without
+.Ar DEV ,
+show a condensed view of the Port based VLAN Tables (PVTs) of all
+devices on the system. The output is an N \(mu N matrix, where N is
+the number of ports on the system. Each element will contain one of
+four possible values:
+.Bl -tag
+.It Cm .
+No communication is allowed between the ports at the corresponding row
+and column.
+.It Cm x
+Bidirectional communication is allowed between the ports at the
+corresponding row and column.
+.It Cm <
+Only unidirectional communication from the column port to the row port
+is allowed.
+.It Cm ^
+Only unidirectional communication from the row port to the column port
+is allowed.
+.El
+.Pp
+Supplying
+.Ar DEV
+will dump the full PVT table for that device. This is useful to
+inspect entries that do not correspond to any physical device,
+i.e. those used by the mv88e6xxx driver to isolate Linux bridges.
+.El
+.Sh SEE ALSO
+.Xr devlink 8
+.Xr mdio 8
+.Sh HISTORY
+.Nm
+acquires its data from the devlink interface of the
+.Nm mv88e6xxx
+driver. In contrast to
+.Xr devlink 8 ,
+it does not concern itself with maintaining multiple snapshots of
+register regions and whatnot \(en it is indended to be used
+interactively during development and debugging.
+.Sh AUTHORS
+.An Tobias Waldekranz Aq Mt tobias@waldekranz.com

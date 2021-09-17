@@ -1,0 +1,60 @@
+.Dd September 17, 2021
+.Dt MDIO-NETLINK 9 KM
+.Os Linux
+.Sh NAME
+.Nm mdio-netlink
+.Nd Netlink interface to MDIO buses
+.Sh SYNOPSIS
+.Bd -literal
+#include <linux/mdio-netlink.h>
+.Ed
+.Sh DESCRIPTION
+.Nm
+provides a direct interface to communicate with devices on MDIO
+buses. In order to provide a race-free way to execute multiple
+reads/writes as an atomic transaction, the input is a program in byte
+code form that is executed within a virtual machine inside
+.Nm .
+This is similar in spirit to how
+.Dq channel programs
+work on some mainframes. The VM has no stack or heap memory, only 8
+16-bit general purpose registers and an implicit program counter. It
+provides a small set of instructions:
+.Bl -tag -offset 2n
+.It Cm READ
+Read from MDIO/XMDIO device to register.
+.It Cm WRITE
+Write register or immediate value to MDIO/XMDIO device.
+.It Cm EMIT
+Emit the contents of a register or immediate value as an output of the program.
+.It Cm AND
+Store the bitwise AND of two operands to a register.
+.It Cm OR
+Store the bitwise OR of two operands to a register.
+.It Cm ADD
+Store the sum of two operands to a register.
+.It Cm JEQ
+Add an immediate value to the program counter if two operands are equal.
+.It Cm JNE
+Add an immediate value to the program counter if two operands are not equal.
+.El
+.Sh HISTORY
+This improves on the traditional MDIO interface available to userspace
+programs in Linux in a few important ways:
+.Bl -bullet -offset 2n
+.It
+MDIO buses are directly addressable. Previous solutions relied on at
+least one Ethernet PHY on the bus being attached to a net device,
+which is typically not the case when the device is an Ethernet switch
+for example.
+.It
+Complex operations can be performed atomically. The old
+.Xr ioctl 2
+interface only supported a single read or write of a single
+register. As a result, things like read/mask/write operations and
+accesses to paged PHYs could not be performed safely.
+.El
+.Sh SEE ALSO
+.Xr mdio 8
+.Sh AUTHORS
+.An Tobias Waldekranz Aq Mt tobias@waldekranz.com
