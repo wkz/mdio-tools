@@ -1,6 +1,6 @@
 SUBDIRS         = man src include
 doc_DATA        = README.md ChangeLog.md COPYING
-EXTRA_DIST      = $(doc_DATA)
+EXTRA_DIST      = $(doc_DATA) kernel
 DISTCLEANFILES  = *~ *.d
 ACLOCAL_AMFLAGS = -I m4
 
