@@ -2,6 +2,9 @@ mdio-tools
 ==========
 [![License Badge][]][License] [![GitHub Status][]][GitHub]
 
+The latest release is always available from GitHub at  
+> https://github.com/wkz/mdio-tools/releases
+
 
 Table of Contents
 -----------------
