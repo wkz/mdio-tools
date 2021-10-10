@@ -77,7 +77,7 @@ Build
 Standard autotools procedure, requires `pkg-config` to locate the `libmnl`
 development files.
 
-    ./configure && make all && sudo make install
+    ./configure --prefix=/usr && make all && sudo make install
 
 At the moment, the kernel module has to be built separately, set
 `KDIR` if building against a kernel in a non-standard location.
