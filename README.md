@@ -3,6 +3,16 @@ mdio-tools
 [![License Badge][]][License] [![GitHub Status][]][GitHub]
 
 
+Table of Contents
+-----------------
+* [Introduction](#introduction)
+* [Usage](#usage)
+* [Build](#build)
+
+
+Introduction
+------------
+
 `mdio` is a low-level Linux debug tool for communicating with devices
 attached an MDIO bus. It improves on existing tools in this space in a
 few important ways:
@@ -18,8 +28,11 @@ few important ways:
   result, things like read/mask/write operations and accesses to paged
   PHYs can be performed safely.
 
+
+Usage
+-----
+
 ```
-Usage:
     mdio            -- List available buses
     mdio BUS        -- Probe BUS for active devices
     mdio BUS OBJ    -- Show status of OBJ
