@@ -1,5 +1,7 @@
 mdio-tools
 ==========
+[![License Badge][]][License] [![GitHub Status][]][GitHub]
+
 
 `mdio` is a low-level Linux debug tool for communicating with devices
 attached an MDIO bus. It improves on existing tools in this space in a
@@ -85,3 +87,8 @@ requires `autoconf` and `automake` to be installed.  A helper script to generate
 configure is available:
 
     ./autogen.sh
+
+[License]:       https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+[License Badge]: https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[GitHub]:        https://github.com/wkz/mdio-tools/actions/workflows/build.yml/
+[GitHub Status]: https://github.com/wkz/mdio-tools/actions/workflows/build.yml/badge.svg
