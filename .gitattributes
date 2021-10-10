@@ -1,3 +1,0 @@
-# Shell Scripts always with LF EOL
-#
-*.sh text eol=lf
