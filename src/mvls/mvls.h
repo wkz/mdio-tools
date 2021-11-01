@@ -37,6 +37,19 @@ struct vtu_entry {
 	struct prio_override fpri;
 };
 
+enum stu_state {
+	STU_DISABLED   = 0,
+	STU_BLOCKING   = 1,
+	STU_LEARNING   = 2,
+	STU_FORWARDING = 3
+};
+
+struct stu_entry {
+	uint8_t  sid;
+
+	enum stu_state state[MAX_PORTS];
+};
+
 enum atu_uc_state {
 	ATU_UC_UNUSED    = 0x0,
 	ATU_UC_D_AGE_1   = 0x1,
@@ -104,6 +117,9 @@ struct family {
 	int (*dev_vtu_parse)(struct dev *dev,
 			     struct mv88e6xxx_devlink_vtu_entry *kentry,
 			     struct vtu_entry *entry);
+	int (*dev_stu_parse)(struct dev *dev,
+			     struct mv88e6xxx_devlink_stu_entry *kentry,
+			     struct stu_entry *entry);
 };
 
 struct chip {

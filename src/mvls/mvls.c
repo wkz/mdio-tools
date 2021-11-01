@@ -56,6 +56,40 @@ static int opal_dev_vtu_parse(struct dev *dev,
 	return __dev_vtu_parse(dev, kentry, entry, 4);
 }
 
+static int __dev_stu_parse(struct dev *dev,
+			   struct mv88e6xxx_devlink_stu_entry *kentry,
+			   struct stu_entry *entry, uint8_t mbits)
+{
+	uint8_t offs = (mbits == 4) ? 2 : 0;
+	int i;
+
+	if (!bit(kentry->vid, 12)) {
+		errno = ENODATA;
+		return -1;
+	}
+
+	entry->sid = bits(kentry->sid, 0, 6);
+
+	for (i = 0; i < 11; i++)
+		entry->state[i] = bits(kentry->data[i / (16 / mbits)],
+				       (i * mbits + offs) & 0xf, 2);
+	return 0;
+}
+
+static int peridot_dev_stu_parse(struct dev *dev,
+				 struct mv88e6xxx_devlink_stu_entry *kentry,
+				 struct stu_entry *entry)
+{
+	return __dev_stu_parse(dev, kentry, entry, 2);
+}
+
+static int opal_dev_stu_parse(struct dev *dev,
+			      struct mv88e6xxx_devlink_stu_entry *kentry,
+			      struct stu_entry *entry)
+{
+	return __dev_stu_parse(dev, kentry, entry, 4);
+}
+
 int opal_dev_atu_parse(struct dev *dev,
 		       struct mv88e6xxx_devlink_atu_entry *kentry,
 		       struct atu_entry *entry)
@@ -105,6 +139,7 @@ const struct family opal_family = {
 
 	.dev_atu_parse = opal_dev_atu_parse,
 	.dev_vtu_parse = opal_dev_vtu_parse,
+	.dev_stu_parse = opal_dev_stu_parse,
 };
 
 const struct family peridot_family = {
@@ -121,6 +156,7 @@ const struct family amethyst_family = {
 
 	.dev_atu_parse = opal_dev_atu_parse,
 	.dev_vtu_parse = peridot_dev_vtu_parse,
+	.dev_stu_parse = peridot_dev_stu_parse,
 };
 
 const struct chip chips[] = {
@@ -698,6 +734,50 @@ void env_show_vtu(struct env *env)
 	}
 }
 
+void env_show_stu(struct env *env)
+{
+	struct dev *dev;
+	struct devlink_region stu = { 0 };
+	struct mv88e6xxx_devlink_stu_entry *kentry;
+	struct stu_entry entry;
+	int err, i;
+
+	puts("\e[7mSID  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+
+	TAILQ_FOREACH(dev, &env->devs, node) {
+		if (env->multichip)
+			printf("\e[2m\e[7mDEV:%x %-30s\e[0m\n",
+			       dev->index, dev->chip->id);
+
+		err = devlink_region_get(&env->dl, &dev->devlink, "stu",
+					 devlink_region_dup_cb, &stu);
+		if (err) {
+			warn("failed querying stu");
+			break;
+		}
+
+		kentry = (void *)stu.data.u8;
+		while (!dev_op(dev, stu_parse, kentry, &entry)) {
+			printf("%3u", entry.sid);
+
+			for (i = 0; i < 11; i++) {
+				switch (entry.state[i]) {
+				case STU_DISABLED:
+					fputs(i >= dev->chip->n_ports ? "   " : "  -", stdout);
+					break;
+				default:
+					printf("  %c", port_state_c[entry.state[i]]);
+				}
+			}
+
+			putchar('\n');
+			kentry++;
+		}
+
+		devlink_region_free(&stu);
+	}
+}
+
 void pvt_print_cell(uint16_t spvt, uint16_t dpvt, int src, int dst)
 {
 	if (bit(spvt, dst) && bit(dpvt, src))
@@ -839,6 +919,14 @@ int usage(int rc)
 	      "    t   Member, egress tagged\n"
 	      "    =   Member, egress unmodified\n"
 	      "\n"
+	      "  stu\n"
+	      "    Displays the contents of the STU.\n"
+	      "    STU states:\n"
+	      "    -   Disabled\n"
+	      "    B   Blocking/listening\n"
+	      "    L   Learning\n"
+	      "    f   Forwarding\n"
+	      "\n"
 	      "  pvt [DEV]\n"
 	      ""
 	      "    Displays the contents of the Port VLAN Table. Without DEV, a\n"
@@ -881,6 +969,7 @@ int main(int argc, char **argv)
 
 	if (optind == argc) {
 		env_show_vtu(&env); puts("");
+		env_show_stu(&env); puts("");
 		env_show_atu(&env); puts("");
 		env_show_ports(&env);
 		return 0;
@@ -892,6 +981,8 @@ int main(int argc, char **argv)
 		env_show_atu(&env);
 	if (!strcmp(argv[optind], "vtu"))
 		env_show_vtu(&env);
+	if (!strcmp(argv[optind], "stu"))
+		env_show_stu(&env);
 	if (!strcmp(argv[optind], "pvt")) {
 		struct dev *dev;
 		int index;

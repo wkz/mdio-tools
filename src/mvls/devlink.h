@@ -24,6 +24,13 @@ struct mv88e6xxx_devlink_vtu_entry {
 	uint16_t resvd;
 };
 
+struct mv88e6xxx_devlink_stu_entry {
+	uint16_t sid;
+	uint16_t vid;
+	uint16_t data[3];
+	uint16_t resvd;
+};
+
 struct devlink_addr {
 	char *bus;
 	char *dev;
