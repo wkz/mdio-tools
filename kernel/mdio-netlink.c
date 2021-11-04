@@ -92,8 +92,9 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 	struct mdio_nl_insn *insn;
 	unsigned long timeout;
 	u16 regs[8] = { 0 };
-	int pc, ret = 0;
+	unsigned int pc;
 	int dev, reg;
+	int ret = 0;
 
 	timeout = jiffies + msecs_to_jiffies(xfer->timeout_ms);
 
