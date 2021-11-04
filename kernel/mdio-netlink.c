@@ -398,11 +398,14 @@ static int mdio_nl_cmd_xfer(struct sk_buff *skb, struct genl_info *info)
 
 	err = mdio_nl_open(&xfer);
 	if (err)
-		return err;
+		goto out_put;
 
 	err = mdio_nl_eval(&xfer);
 
 	err = mdio_nl_close(&xfer, true, err);
+
+out_put:
+	put_device(&xfer.mdio->dev);
 	return err;
 }
 
