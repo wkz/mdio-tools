@@ -98,13 +98,17 @@ int main(int argc, char **argv)
 	argv += optind;
 	argc -= optind;
 
-	if (mdio_modprobe())
-		fprintf(stderr, "WARN: mdio-netlink module not detected, "
-			"and could not be loaded.\n");
-
 	if (mdio_init()) {
-		fprintf(stderr, "ERROR: Unable to initialize.\n");
-		return 1;
+		if (mdio_modprobe()) {
+			fprintf(stderr, "ERROR: mdio-netlink module not "
+				"detected, and could not be loaded.\n");
+			return 1;
+		}
+
+		if (mdio_init()) {
+			fprintf(stderr, "ERROR: Unable to initialize.\n");
+			return 1;
+		}
 	}
 
 	arg = argv_pop(&argc, &argv);
