@@ -160,6 +160,7 @@ const char *atu_mc_str[] = {
 char port_fmode_c[] = { 'n', 'D', 'P', 'E' };
 char port_emode_c[] = { '=', 'u', 't', 'D' };
 char port_state_c[] = { '-', 'B', 'L', 'f' };
+char port_qmode_c[] = { '-', 'F', 'C', 's' };
 
 static const char *port_link_str(struct port *port)
 {
@@ -512,22 +513,23 @@ int env_init(struct env *env)
 
 void env_show_ports(struct env *env)
 {
+	uint16_t ctrl, ctrl2;
 	struct port *port;
 	struct dev *dev;
-	uint16_t ctrl;
 
-	puts("\e[7mNETDEV    P  LINK  MO  FL  S  L  PVID   FID\e[0m");
+	puts("\e[7mNETDEV    P  LINK  MO  FL  S  L  .1Q  PVID   FID\e[0m");
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
 		if (env->multichip)
-			printf("\e[2m\e[7mDEV:%x %-37s\e[0m\n",
+			printf("\e[2m\e[7mDEV:%x %-42s\e[0m\n",
 			       dev->index, dev->chip->id);
 
 		TAILQ_FOREACH(port, &dev->ports, node) {
 			port_load_regs(port);
 			ctrl = reg16(port->regs, 4);
+			ctrl2 = reg16(port->regs, 8);
 
-			printf("%-8s  %x  %4s  %c%c  %c%c  %c %2s  %4u  %4u\n", port->netdev,
+			printf("%-8s  %x  %4s  %c%c  %c%c  %c %2s  %c%c%c  %4u  %4u%s\n", port->netdev,
 			       port->index,
 			       port_link_str(port),
 			       port_fmode_c[bits(ctrl,  8, 2)],
@@ -536,8 +538,12 @@ void env_show_ports(struct env *env)
 			       bit(ctrl, 3) ? 'm' : '-',
 			       port_state_c[bits(ctrl, 0, 2)],
 			       port_lag_str(port),
+			       port_qmode_c[bits(ctrl2, 10, 2)],
+			       bit(ctrl2, 8) ? '-' : 'u',
+			       bit(ctrl2, 9) ? '-' : 't',
 			       bits(reg16(port->regs, 7), 0, 12),
-			       port_op(port, fid)
+			       port_op(port, fid),
+			       bit(ctrl2, 7) ? "" : "!map"
 				);
 		}
 	}
