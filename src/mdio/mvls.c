@@ -17,6 +17,8 @@
 #define MVLS_G1 0x1b
 #define MVLS_G2 0x1c
 
+#define MVLS_REG(_port, _reg) (((_port) << 16) | (_reg))
+
 struct mvls_device {
 	struct mdio_device dev;
 	uint16_t id;
@@ -90,6 +92,96 @@ static int mvls_write(struct mdio_device *dev, struct mdio_prog *prog,
 	mdio_prog_push(prog, INSN(WRITE, IMM(mdev->id), IMM(MVLS_CMD),
 				  IMM(mvls_multi_cmd(port, reg, true))));
 	mvls_wait_cmd(prog, mdev->id);
+	return 0;
+}
+
+static void mvls_wait(struct mdio_device *dev, struct mdio_prog *prog,
+		     uint32_t reg)
+{
+	int retry = prog->len;
+
+	mvls_read_to(dev, prog, reg, 0);
+	mdio_prog_push(prog, INSN(AND, REG(0), IMM(MVLS_CMD_BUSY), REG(0)));
+	mdio_prog_push(prog, INSN(JEQ, REG(0), IMM(MVLS_CMD_BUSY),
+				  GOTO(prog->len, retry)));
+}
+
+int mvls_atu_cb(uint32_t *data, int len, int err, void *_null)
+{
+	if (len != 0)
+		return 1;
+
+	return err;
+}
+
+static int mvls_atu_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	uint8_t op = 0;
+	char *arg;
+	int err;
+
+	/* Drop "atu" token. */
+	argv_pop(&argc, &argv);
+
+	arg = argv_pop(&argc, &argv);
+	if (!arg) {
+		fprintf(stderr, "ERROR: Expected ATU command\n");
+		return 1;
+	} else if (!strcmp(arg, "flush")) {
+		arg = argv_pop(&argc, &argv);
+		if (!arg) {
+			op += 2;
+			goto exec;
+		} else if (!strcmp(arg, "all")) {
+			goto read_stat;
+		} else {
+			long fid = strtol(arg, NULL, 0);
+
+			if (fid < 0) {
+				fprintf(stderr, "ERROR: Invalid FID \"%s\"\n", arg);
+				return 1;
+			}
+
+			/* Limit to specific FID */
+			mvls_read_to(dev, &prog, MVLS_REG(MVLS_G1, 0x01), 0);
+			mdio_prog_push(&prog, INSN(AND, REG(0), IMM(0xf0000), REG(0)));
+			mdio_prog_push(&prog, INSN(OR, REG(0), IMM(fid & 0xfff), REG(0)));
+			mvls_write(dev, &prog, MVLS_REG(MVLS_G1, 0x01), REG(0));
+			op = 4;
+		}
+
+	read_stat:
+		arg = argv_pop(&argc, &argv);
+		if (!arg) {
+			op += 2;
+		} else if (!strcmp(arg, "static")) {
+			op += 1;
+		} else {
+			fprintf(stderr, "ERROR: Invalid option \"%s\"\n", arg);
+		}
+	} else {
+		fprintf(stderr, "ERROR: Unknown ATU command \"%s\"\n", arg);
+		return 1;
+	}
+
+exec:
+	mvls_wait(dev, &prog, MVLS_REG(MVLS_G1, 0x0b));
+
+	mvls_read_to(dev, &prog, MVLS_REG(MVLS_G1, 0x0b), 0);
+	mdio_prog_push(&prog, INSN(AND, REG(0), IMM(0xfff), REG(0)));
+	mdio_prog_push(&prog, INSN(OR, REG(0), IMM(BIT(15) | (op << 12)), REG(0)));
+	mvls_write(dev, &prog, MVLS_REG(MVLS_G1, 0x0b), REG(0));
+
+	mvls_wait(dev, &prog, MVLS_REG(MVLS_G1, 0x0b));
+
+	err = mdio_xfer(dev->bus, &prog, mvls_atu_cb, NULL);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: ATU operation failed (%d)\n", err);
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -182,6 +274,9 @@ static int mvls_exec(const char *bus, int argc, char **argv)
 	arg = argv_peek(argc, argv);
 	if (!arg)
 		return 1;
+
+	if (!strcmp(arg, "atu"))
+		return mvls_atu_exec(&mdev.dev, argc, argv);
 
 	return mdio_common_exec(&mdev.dev, argc, argv);
 }
