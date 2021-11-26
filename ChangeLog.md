@@ -3,9 +3,27 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.0.1] - 2021-11-26
+---------------------
+
+Primarily fixes a few issues in the kernel module that were found
+during a quick review from Russell King:
+
+https://lore.kernel.org/netdev/YYPThd7aX+TBWslz@shell.armlinux.org.uk/
+https://lore.kernel.org/netdev/YYPU1gOvUPa00JWg@shell.armlinux.org.uk/
+
+### Added
+- mdio: The mvls subcommand now supports flushing the ATU
+
+### Fixed
+- mdio-netlink: Plug some glaring holes around integer overflows of
+  the PC.
+- mdio-netlink: Release reference to MDIO bus after a transaction
+  completes.
+
 
 [v1.0.0] - 2021-09-17
----------------------------------
+---------------------
 
 ### Added
 - Basic usage text, `mvls -h`
