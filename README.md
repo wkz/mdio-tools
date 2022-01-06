@@ -90,19 +90,23 @@ Operations:
 Build
 -----
 
-Standard autotools procedure, requires `pkg-config` to locate the `libmnl`
-development files.
+At the moment, the kernel module (which requires at least kernel version 5.6)
+has to be built separately. Set `KDIR` if building against a kernel in a
+non-standard location.
 
-    ./configure --prefix=/usr && make all && sudo make install
-
-At the moment, the kernel module has to be built separately, set
-`KDIR` if building against a kernel in a non-standard location.
+    cd kernel/
+	make all && sudo make install
 
 When building from GIT, the `configure` script first needs to be generated, this
 requires `autoconf` and `automake` to be installed.  A helper script to generate
 configure is available:
 
     ./autogen.sh
+
+Standard autotools incantation is then used, requires `pkg-config` to locate the
+`libmnl` development files.
+
+    ./configure --prefix=/usr && make all && sudo make install
 
 [License]:       https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 [License Badge]: https://img.shields.io/badge/License-GPL%20v2-blue.svg
