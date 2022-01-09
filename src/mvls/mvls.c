@@ -115,6 +115,14 @@ const struct family peridot_family = {
 	.dev_vtu_parse = peridot_dev_vtu_parse,
 };
 
+const struct family amethyst_family = {
+	.port_lag = opal_port_lag,
+	.port_fid = opal_port_fid,
+
+	.dev_atu_parse = opal_dev_atu_parse,
+	.dev_vtu_parse = peridot_dev_vtu_parse,
+};
+
 const struct chip chips[] = {
 	{
 		.id = "Marvell 88E6097/88E6097F",
@@ -127,8 +135,48 @@ const struct chip chips[] = {
 		.n_ports = 7,
 	},
 	{
+		.id = "Marvell 88E6190",
+		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6190X",
+		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6191",
+		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6191X",
+		.family = &amethyst_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6193X",
+		.family = &amethyst_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6290",
+		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6390",
+		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
 		.id = "Marvell 88E6390X",
 		.family = &peridot_family,
+		.n_ports = 11,
+	},
+	{
+		.id = "Marvell 88E6393X",
+		.family = &amethyst_family,
 		.n_ports = 11,
 	},
 
