@@ -523,6 +523,101 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 	return 0;
 }
 
+int mdio_common_bench_cb(uint32_t *data, int len, int err, void *_start)
+{
+	struct timespec end, *start = _start;
+
+	clock_gettime(CLOCK_MONOTONIC, &end);
+
+	if (len) {
+		int i;
+
+		printf("Read back %d incorrect values:\n", len);
+		err = 1;
+
+		for (i = 0; i < len; i++)
+			printf("\t0x%4.4x\n", data[i]);
+	}
+
+	end.tv_sec -= start->tv_sec;
+	end.tv_nsec -= start->tv_nsec;
+	if (end.tv_nsec < 0) {
+		end.tv_nsec += 1000000000;
+		end.tv_sec--;
+	}
+
+	printf("Performed 1000 reads in ");
+
+	if (end.tv_sec)
+		printf("%ld.%2.2lds\n", end.tv_sec, end.tv_nsec / 10000000);
+	else if (end.tv_nsec > 1000000)
+		printf("%ldms\n", end.tv_nsec / 1000000);
+	else if (end.tv_nsec > 1000)
+		printf("%ldus\n", end.tv_nsec / 1000);
+	else
+		printf("%ldns\n", end.tv_nsec);
+
+	return err;
+}
+
+int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	struct timespec start;
+	uint32_t reg, val = 0;
+	int err, loop;
+
+	err = mdio_device_parse_reg(dev, &argc, &argv, &reg, NULL);
+	if (err)
+		return err;
+
+	if (argv_peek(argc, argv)) {
+		err = mdio_device_parse_val(dev, &argc, &argv, &val, NULL);
+		if (err)
+			return err;
+
+		mdio_prog_push(&prog, INSN(ADD, IMM(val), IMM(0), REG(1)));
+		err = dev->driver->write(dev, &prog, reg, REG(1));
+		if (err)
+			return err;
+	} else {
+		err = dev->driver->read(dev, &prog, reg);
+		if (err)
+			return err;
+
+		mdio_prog_push(&prog, INSN(ADD, REG(0), IMM(0), REG(1)));
+	}
+
+	if (argv_peek(argc, argv)) {
+		fprintf(stderr, "ERROR: Unexpected argument");
+		return EINVAL;
+	}
+
+
+	mdio_prog_push(&prog, INSN(ADD, IMM(0), IMM(0), REG(2)));
+
+	loop = prog.len;
+
+	err = dev->driver->read(dev, &prog, reg);
+	if (err)
+		return err;
+
+	mdio_prog_push(&prog, INSN(JEQ, REG(0), REG(1), IMM(1)));
+	mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	mdio_prog_push(&prog, INSN(ADD, REG(2), IMM(1), REG(2)));
+	mdio_prog_push(&prog, INSN(JNE, REG(2), IMM(1000), GOTO(prog.len, loop)));
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	err = mdio_xfer(dev->bus, &prog, mdio_common_bench_cb, &start);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: Bench operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
+
 int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 {
 	if (!argc)
@@ -531,6 +626,9 @@ int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 	if (!strcmp(argv[0], "raw")) {
 		argv_pop(&argc, &argv);
 		return mdio_common_raw_exec(dev, argc, argv);
+	} else if (!strcmp(argv[0], "bench")) {
+		argv_pop(&argc, &argv);
+		return mdio_common_bench_exec(dev, argc, argv);
 	}
 
 	return mdio_common_raw_exec(dev, argc, argv);

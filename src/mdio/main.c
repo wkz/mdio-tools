@@ -59,6 +59,13 @@ int usage(int rc, FILE *fp)
 	      "\n"
 	      "    DATA: u16\n"
 	      "    MASK: u16\n"
+	      "\n"
+ 	      "  bench REG [DATA]\n"
+	      "    Benchmark read performance. If DATA is supplied, it is written to REG,\n"
+	      "    otherwise the current value in REG is read. REG is then read 1000\n"
+	      "    times. Any unexpected values are reported, along with the total time.\n"
+	      "\n"
+	      "    DATA: u16\n"
 	      , fp);
 
 	return rc;

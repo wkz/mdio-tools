@@ -139,6 +139,26 @@ Determined by the device type (see
 .It Ar MASK
 := 0-0xffff
 .El
+.It Cm bench Ar REG Op Ar DATA
+Benchmark read performance.
+If
+.Ar DATA
+is supplied, it is written to
+.Ar REG ,
+otherwise the current value in
+.Ar REG
+is read.
+.Ar REG
+is then read 1000 times. Any unexpected values are reported, along
+with the total time.
+.Pp
+.Bl -tag -compact
+.It Ar REG
+Determined by the device type (see
+.Sx Devices )
+.It Ar DATA
+:= 0-0xffff
+.El
 .El
 .Sh EXAMPLES
 .Pp
