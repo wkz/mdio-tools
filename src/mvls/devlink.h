@@ -1,6 +1,8 @@
 #ifndef __DEVLINK_H
 #define __DEVLINK_H
 
+#include <stdlib.h>
+
 #include <libmnl/libmnl.h>
 #include <linux/devlink.h>
 #include <linux/genetlink.h>

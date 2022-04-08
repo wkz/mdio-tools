@@ -1,6 +1,7 @@
 #ifndef __MVLS_H
 #define __MVLS_H
 
+#include <errno.h>
 #include <sys/queue.h>
 
 #include "devlink.h"
@@ -9,6 +10,10 @@
 #define container_of(ptr, type, member) ({			     \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr); \
                 (type *)( (char *)__mptr - offsetof(type,member) );})
+
+#define reg16(_region, _reg) ((_region).data.u16[_reg])
+#define bits(_reg, _bit, _n) (((_reg) >> (_bit)) & ((1 << (_n)) - 1))
+#define bit(_reg, _bit) bits(_reg, _bit, 1)
 
 #define MAX_PORTS 11
 
@@ -141,6 +146,8 @@ struct port {
 };
 TAILQ_HEAD(port_list, port);
 
+int port_load_regs(struct port *port);
+
 #define port_op(_port, _op, ...) \
 	((_port)->dev->chip->family-> port_ ## _op )((_port), ##__VA_ARGS__)
 
@@ -159,6 +166,8 @@ struct dev {
 };
 TAILQ_HEAD(dev_list, dev);
 
+int dev_load_pvt(struct dev *dev);
+
 #define dev_op(_dev, _op, ...) \
 	((_dev)->chip->family-> dev_ ## _op )((_dev), ##__VA_ARGS__)
 
@@ -170,5 +179,102 @@ struct env {
 };
 
 #define env_from_dl(_dl) container_of(_dl, struct env, dl)
+
+struct printer {
+	void (*env_print_ports)(struct env *env);
+	void (*env_print_atu)(struct env *env);
+	void (*env_print_vtu)(struct env *env);
+	void (*env_print_stu)(struct env *env);
+
+	void (*env_print_pvt)(struct env *env);
+	void (*dev_print_pvt)(struct dev *dev);
+
+	void (*prologue)(void);
+	void (*join)(void);
+	void (*epilogue)(void);
+};
+
+static inline int env_print_ports(const struct printer *p, struct env *env)
+{
+	if (!p->env_print_ports)
+		return -ENOENT;
+
+	p->env_print_ports(env);
+	return 0;
+}
+
+static inline int env_print_atu(const struct printer *p, struct env *env)
+{
+	if (!p->env_print_atu)
+		return -ENOENT;
+
+	p->env_print_atu(env);
+	return 0;
+}
+
+static inline int env_print_vtu(const struct printer *p, struct env *env)
+{
+	if (!p->env_print_vtu)
+		return -ENOENT;
+
+	p->env_print_vtu(env);
+	return 0;
+}
+
+static inline int env_print_stu(const struct printer *p, struct env *env)
+{
+	if (!p->env_print_stu)
+		return -ENOENT;
+
+	p->env_print_stu(env);
+	return 0;
+}
+
+static inline int env_print_pvt(const struct printer *p, struct env *env)
+{
+	if (!p->env_print_pvt)
+		return -ENOENT;
+
+	p->env_print_pvt(env);
+	return 0;
+}
+
+static inline int dev_print_pvt(const struct printer *p, struct dev *dev)
+{
+	if (!p->dev_print_pvt)
+		return -ENOENT;
+
+	p->dev_print_pvt(dev);
+	return 0;
+}
+
+static inline int print_prologue(const struct printer *p)
+{
+	if (!p->prologue)
+		return -ENOENT;
+
+	p->prologue();
+	return 0;
+}
+
+static inline int print_join(const struct printer *p)
+{
+	if (!p->join)
+		return -ENOENT;
+
+	p->join();
+	return 0;
+}
+
+static inline int print_epilogue(const struct printer *p)
+{
+	if (!p->epilogue)
+		return -ENOENT;
+
+	p->epilogue();
+	return 0;
+}
+
+extern const struct printer printer_show;
 
 #endif	/* __MVLS_H */
