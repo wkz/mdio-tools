@@ -276,5 +276,6 @@ static inline int print_epilogue(const struct printer *p)
 }
 
 extern const struct printer printer_show;
+extern const struct printer printer_json;
 
 #endif	/* __MVLS_H */

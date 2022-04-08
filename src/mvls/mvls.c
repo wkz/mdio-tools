@@ -485,6 +485,7 @@ int usage(int rc)
 	      "\n"
 	      "Options:\n"
 	      "  -h   This help text\n"
+	      "  -j   Use JSON for all output\n"
 	      "  -v   Show verision and contact information\n"
 	      "\n"
 	      "Commands:\n"
@@ -533,10 +534,14 @@ int main(int argc, char **argv)
 	struct env env;
 	int c;
 
-	while ((c = getopt(argc, argv, "hv")) != EOF) {
+	while ((c = getopt(argc, argv, "hjv")) != EOF) {
 		switch (c) {
 		case 'h':
 			return usage(0);
+
+		case 'j':
+			p = &printer_json;
+			break;
 
 		case 'v':
 			puts("v" PACKAGE_VERSION);
