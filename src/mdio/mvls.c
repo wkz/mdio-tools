@@ -106,6 +106,93 @@ static void mvls_wait(struct mdio_device *dev, struct mdio_prog *prog,
 				  GOTO(prog->len, retry)));
 }
 
+static void mvls_print_portvec(uint16_t portvec)
+{
+	int i;
+
+	for (i = 0; i < 11; i++) {
+		if (portvec & (1 << i))
+			printf("  %x", i);
+		else
+			fputs("  .", stdout);
+	}
+
+}
+
+int mvls_lag_cb(uint32_t *data, int len, int err, void *_null)
+{
+	int mask, lag;
+
+	if (len != 16 + 8)
+		return 1;
+
+	puts("\e[7m LAG  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+	for (lag = 0; lag < 16; lag++) {
+		if (!(data[lag] & 0x7ff))
+			continue;
+
+		printf("%4d", lag);
+		mvls_print_portvec(data[lag]);
+		putchar('\n');
+	}
+
+	putchar('\n');
+	data += 16;
+
+	puts("\e[7mMASK  0  1  2  3  4  5  6  7  8  9  a\e[0m");
+	for (mask = 0; mask < 8; mask++) {
+		printf("%4d", mask);
+		mvls_print_portvec(data[mask]);
+		putchar('\n');
+	}
+	return err;
+}
+
+static int mvls_lag_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	char *arg;
+	int err, i;
+
+	/* Drop "lag" token. */
+	argv_pop(&argc, &argv);
+
+	arg = argv_pop(&argc, &argv);
+	if (arg) {
+		fprintf(stderr, "ERROR: Unknown LAG command\n");
+		return 1;
+	}
+
+	for (i = 0; i < 16; i++) {
+		mvls_write(dev, &prog, MVLS_REG(MVLS_G2, 0x08), IMM(i << 11));
+		mvls_read(dev, &prog, MVLS_REG(MVLS_G2, 0x08));
+		mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	}
+
+	for (i = 0; i < 8; i++) {
+		mvls_read(dev, &prog, MVLS_REG(MVLS_G2, 0x07));
+
+		/* Keep the current value of the HashTrunk bit when
+		 * selecting the mask to read out. */
+		mdio_prog_push(&prog, INSN(AND, REG(0), IMM(1 << 11), REG(0)));
+		mdio_prog_push(&prog, INSN(OR, REG(0), IMM(i << 12), REG(0)));
+
+		mvls_write(dev, &prog, MVLS_REG(MVLS_G2, 0x07), REG(0));
+		mvls_read(dev, &prog, MVLS_REG(MVLS_G2, 0x07));
+		mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	}
+
+	err = mdio_xfer(dev->bus, &prog, mvls_lag_cb, NULL);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: LAG operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
+
+
 int mvls_atu_cb(uint32_t *data, int len, int err, void *_null)
 {
 	if (len != 0)
@@ -277,6 +364,8 @@ static int mvls_exec(const char *bus, int argc, char **argv)
 
 	if (!strcmp(arg, "atu"))
 		return mvls_atu_exec(&mdev.dev, argc, argv);
+	if (!strcmp(arg, "lag"))
+		return mvls_lag_exec(&mdev.dev, argc, argv);
 
 	return mdio_common_exec(&mdev.dev, argc, argv);
 }
