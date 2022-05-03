@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <linux/mdio.h>
 
 #include "mdio.h"
@@ -19,12 +20,20 @@
 
 #define MVLS_REG(_port, _reg) (((_port) << 16) | (_reg))
 
+enum mvls_famliy {
+	FAM_UNKNOWN,
+	FAM_SPINNAKER,
+	FAM_OPAL,
+	FAM_AGATE,
+	FAM_PERIDOT,
+	FAM_AMETHYST,
+};
+
 struct mvls_device {
 	struct mdio_device dev;
 	uint16_t id;
 
 };
-#define to_mvls_mdio_ops(_ops) container_of(_ops, struct mvls_mdio_ops, ops)
 
 static inline uint16_t mvls_multi_cmd(uint8_t port, uint8_t reg, bool write)
 {
@@ -104,6 +113,54 @@ static void mvls_wait(struct mdio_device *dev, struct mdio_prog *prog,
 	mdio_prog_push(prog, INSN(AND, REG(0), IMM(MVLS_CMD_BUSY), REG(0)));
 	mdio_prog_push(prog, INSN(JEQ, REG(0), IMM(MVLS_CMD_BUSY),
 				  GOTO(prog->len, retry)));
+}
+
+int mvls_id_cb(uint32_t *data, int len, int err, void *_id)
+{
+	uint32_t *id = _id;
+
+	if (len != 1)
+		return 1;
+
+	*id = *data;
+	return err;
+}
+
+static uint32_t mvls_id_exec(struct mdio_device *dev)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	uint32_t id;
+	int err;
+
+	mvls_read(dev, &prog, MVLS_REG(0x10, 0x03));
+	mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+
+	err = mdio_xfer(dev->bus, &prog, mvls_id_cb, &id);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: ID operation failed (%d)\n", err);
+		return 0;
+	}
+
+	return id;
+}
+
+static enum mvls_famliy mvls_get_family(struct mdio_device *dev)
+{
+	uint32_t id = mvls_id_exec(dev);
+
+	switch (id >> 4) {
+	case 0x099:
+		return FAM_OPAL;
+	case 0x352:
+		return FAM_AGATE;
+	case 0x0a1:
+		return FAM_PERIDOT;
+	default:
+		break;
+	}
+
+	return FAM_UNKNOWN;
 }
 
 static void mvls_print_portvec(uint16_t portvec)
@@ -192,6 +249,127 @@ static int mvls_lag_exec(struct mdio_device *dev, int argc, char **argv)
 	return 0;
 }
 
+struct mvls_counter_ctx {
+	enum mvls_famliy fam;
+
+	uint32_t prev[11][6];
+};
+
+int mvls_counter_cb(uint32_t *data, int len, int err, void *_ctx)
+{
+	struct mvls_counter_ctx *ctx = _ctx;
+	uint32_t now[6];
+	int i, n;
+
+	if (len != 11 * 6 * 2)
+		return 1;
+
+	printf("    \e[7m Bcasts   Ucasts   Mcasts\e[0m\n");
+	printf("\e[7mP    Rx  Tx   Rx  Tx   Rx  Tx\e[0m\n");
+
+	for (i = 0; i < 11; i++, data += 6 * 2) {
+		for (n = 0; n < 6; n++)
+			now[n] = (data[2 * n] << 16) | data[2 * n + 1];
+
+		if (!memcmp(ctx->prev[i], now, sizeof(now)))
+			continue;
+
+		printf("%x   %3u %3u  %3u %3u  %3u %3u\n", i,
+		       now[1] - ctx->prev[i][1], now[4] - ctx->prev[i][4],
+		       now[0] - ctx->prev[i][0], now[3] - ctx->prev[i][3],
+		       now[2] - ctx->prev[i][2], now[5] - ctx->prev[i][5]);
+
+		memcpy(ctx->prev[i], now, sizeof(now));
+	}
+	return err;
+}
+
+static void mvls_counter_read_one(struct mdio_device *dev, struct mdio_prog *prog,
+				  uint8_t counter)
+{
+	mvls_write(dev, prog, MVLS_REG(MVLS_G1, 0x1d), IMM((1 << 15) | (4 << 12) | counter));
+	mvls_wait(dev, prog, MVLS_REG(MVLS_G1, 0x1d));
+
+	mvls_read(dev, prog, MVLS_REG(MVLS_G1, 0x1e));
+	mdio_prog_push(prog, INSN(EMIT, REG(0), 0, 0));
+	mvls_read(dev, prog, MVLS_REG(MVLS_G1, 0x1f));
+	mdio_prog_push(prog, INSN(EMIT, REG(0), 0, 0));
+
+}
+
+static int mvls_counter_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	struct mvls_counter_ctx ctx = {};
+	int err, base, shift, loop;
+	bool repeat = false;
+	char *arg;
+
+	/* Drop "counter" token. */
+	argv_pop(&argc, &argv);
+
+	arg = argv_pop(&argc, &argv);
+	if (arg) {
+		if (!strcmp(arg, "repeat"))
+			repeat = true;
+		else {
+			fprintf(stderr, "ERROR: Unexpected counter command\n");
+			return 1;
+		}
+	}
+
+	ctx.fam = mvls_get_family(dev);
+	switch (ctx.fam) {
+	case FAM_AGATE:
+	case FAM_PERIDOT:
+	case FAM_AMETHYST:
+		base = 1 << 5;
+		shift = 1 << 5;
+		break;
+	default:
+		base = 0;
+		shift = 1;
+	}
+
+	mvls_wait(dev, &prog, MVLS_REG(MVLS_G1, 0x1d));
+
+	mdio_prog_push(&prog, INSN(ADD, IMM((1 << 15) | (5 << 12) | base), IMM(0), REG(1)));
+
+	loop = prog.len;
+
+	mvls_write(dev, &prog, MVLS_REG(MVLS_G1, 0x1d), REG(1));
+	mvls_wait(dev, &prog, MVLS_REG(MVLS_G1, 0x1d));
+
+	mvls_counter_read_one(dev, &prog, 0x04);
+	mvls_counter_read_one(dev, &prog, 0x06);
+	mvls_counter_read_one(dev, &prog, 0x07);
+
+	mvls_counter_read_one(dev, &prog, 0x10);
+	mvls_counter_read_one(dev, &prog, 0x13);
+	mvls_counter_read_one(dev, &prog, 0x12);
+
+	mdio_prog_push(&prog, INSN(ADD, REG(1), IMM(shift), REG(1)));
+	mdio_prog_push(&prog, INSN(JNE, REG(1),
+				   IMM((1 << 15) | (5 << 12) | (base + (shift * 11))),
+				   GOTO(prog.len, loop)));
+
+	while (!(err = mdio_xfer(dev->bus, &prog, mvls_counter_cb, &ctx))) {
+		if (repeat) {
+			sleep(1);
+			fputs("\e[2J", stdout);
+		} else {
+			break;
+		}
+	}
+
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: COUNTER operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
 
 int mvls_atu_cb(uint32_t *data, int len, int err, void *_null)
 {
@@ -364,6 +542,8 @@ static int mvls_exec(const char *bus, int argc, char **argv)
 
 	if (!strcmp(arg, "atu"))
 		return mvls_atu_exec(&mdev.dev, argc, argv);
+	if (!strcmp(arg, "counter"))
+		return mvls_counter_exec(&mdev.dev, argc, argv);
 	if (!strcmp(arg, "lag"))
 		return mvls_lag_exec(&mdev.dev, argc, argv);
 
