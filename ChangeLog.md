@@ -3,6 +3,23 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.1.0] - 2022-05-04
+---------------------
+
+A sprawling release, adding various mvls related introspection
+features. mvls also gains a JSON output format.
+
+### Added
+- mvls: The STU can now be dumped (requires Linux 5.17 or later). This
+  is useful now that mv88e6xxx supports offloading of MST states
+- mvls: Output can now be formatted as JSON for easier scripting
+- mdio: mvls: A subset of MIB counters can now be dumped. This let's
+  you get at counters for DSA ports, which are not reachable from
+  ethtool
+- mdio: mvls: The LAG mask and LAG map tables can now be dumped
+- mdio: Improve usage message by including the examples from the
+  manual
+
 [v1.0.1] - 2021-11-26
 ---------------------
 
