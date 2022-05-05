@@ -576,8 +576,8 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 		if (err)
 			return err;
 
-		mdio_prog_push(&prog, INSN(ADD, IMM(val), IMM(0), REG(1)));
-		err = dev->driver->write(dev, &prog, reg, REG(1));
+		mdio_prog_push(&prog, INSN(ADD, IMM(val), IMM(0), REG(7)));
+		err = dev->driver->write(dev, &prog, reg, REG(7));
 		if (err)
 			return err;
 	} else {
@@ -585,7 +585,7 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 		if (err)
 			return err;
 
-		mdio_prog_push(&prog, INSN(ADD, REG(0), IMM(0), REG(1)));
+		mdio_prog_push(&prog, INSN(ADD, REG(0), IMM(0), REG(7)));
 	}
 
 	if (argv_peek(argc, argv)) {
@@ -594,7 +594,7 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 	}
 
 
-	mdio_prog_push(&prog, INSN(ADD, IMM(0), IMM(0), REG(2)));
+	mdio_prog_push(&prog, INSN(ADD, IMM(0), IMM(0), REG(6)));
 
 	loop = prog.len;
 
@@ -602,10 +602,10 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 	if (err)
 		return err;
 
-	mdio_prog_push(&prog, INSN(JEQ, REG(0), REG(1), IMM(1)));
+	mdio_prog_push(&prog, INSN(JEQ, REG(0), REG(7), IMM(1)));
 	mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
-	mdio_prog_push(&prog, INSN(ADD, REG(2), IMM(1), REG(2)));
-	mdio_prog_push(&prog, INSN(JNE, REG(2), IMM(1000), GOTO(prog.len, loop)));
+	mdio_prog_push(&prog, INSN(ADD, REG(6), IMM(1), REG(6)));
+	mdio_prog_push(&prog, INSN(JNE, REG(6), IMM(1000), GOTO(prog.len, loop)));
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	err = mdio_xfer(dev->bus, &prog, mdio_common_bench_cb, &start);
