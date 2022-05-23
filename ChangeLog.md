@@ -3,6 +3,17 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.1.1] - 2022-05-23
+---------------------
+
+Tiny bugfix release.
+
+### Fixed
+- mdio: The bench operation is now much more reliable when stacked on
+  other devices than regular PHYs (e.g. paged PHYs or Marvell
+  switches).
+- mvls: The STU can now be dumped chips from the Peridot generation.
+
 [v1.1.0] - 2022-05-04
 ---------------------
 
