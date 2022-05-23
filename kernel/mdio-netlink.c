@@ -165,11 +165,15 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 
 		case MDIO_NL_OP_EMIT:
 			ret = mdio_nl_emit(xfer, __arg_ri(insn->arg0, regs));
+			if (ret < 0)
+				goto exit;
+			ret = 0;
 			break;
 
 		case MDIO_NL_OP_UNSPEC:
 		default:
-			return -EINVAL;
+			ret = -EINVAL;
+			goto exit;
 		}
 	}
 exit:
