@@ -546,7 +546,10 @@ int mdio_common_bench_cb(uint32_t *data, int len, int err, void *_start)
 		end.tv_sec--;
 	}
 
-	printf("Performed 1000 reads in ");
+	if (err)
+		printf("Benchmark failed after ");
+	else
+		printf("Performed 1000 reads in ");
 
 	if (end.tv_sec)
 		printf("%ld.%2.2lds\n", end.tv_sec, end.tv_nsec / 10000000);
@@ -608,7 +611,7 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 	mdio_prog_push(&prog, INSN(JNE, REG(6), IMM(1000), GOTO(prog.len, loop)));
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
-	err = mdio_xfer(dev->bus, &prog, mdio_common_bench_cb, &start);
+	err = mdio_xfer_timeout(dev->bus, &prog, mdio_common_bench_cb, &start, 10000);
 	free(prog.insns);
 	if (err) {
 		fprintf(stderr, "ERROR: Bench operation failed (%d)\n", err);
@@ -639,20 +642,21 @@ int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 struct mdio_xfer_data {
 	mdio_xfer_cb_t cb;
 	void *arg;
+	int err;
 };
 
 static int mdio_xfer_cb(const struct nlmsghdr *nlh, void *_xfer)
 {
 	struct genlmsghdr *genl = mnl_nlmsg_get_payload(nlh);
-	struct mdio_xfer_data *xfer = _xfer;
 	struct nlattr *tb[MDIO_NLA_MAX + 1] = {};
-	int len, err, xerr = 0;
+	struct mdio_xfer_data *xfer = _xfer;
 	uint32_t *data;
+	int len, err;
 
 	mnl_attr_parse(nlh, sizeof(*genl), parse_attrs, tb);
 
 	if (tb[MDIO_NLA_ERROR])
-		xerr = (int)mnl_attr_get_u32(tb[MDIO_NLA_ERROR]);
+		xfer->err = (int)mnl_attr_get_u32(tb[MDIO_NLA_ERROR]);
 
 	if (!tb[MDIO_NLA_DATA])
 		return MNL_CB_ERROR;
@@ -660,15 +664,16 @@ static int mdio_xfer_cb(const struct nlmsghdr *nlh, void *_xfer)
 	len = mnl_attr_get_payload_len(tb[MDIO_NLA_DATA]) / sizeof(uint32_t);
 	data = mnl_attr_get_payload(tb[MDIO_NLA_DATA]);
 
-	err = xfer->cb(data, len, xerr, xfer->arg);
+	err = xfer->cb(data, len, xfer->err, xfer->arg);
 	return err ? MNL_CB_ERROR : MNL_CB_OK;
 }
 
-int mdio_xfer(const char *bus, struct mdio_prog *prog,
-	      mdio_xfer_cb_t cb, void *arg)
+int mdio_xfer_timeout(const char *bus, struct mdio_prog *prog,
+		      mdio_xfer_cb_t cb, void *arg, uint16_t timeout_ms)
 {
 	struct mdio_xfer_data xfer = { .cb = cb, .arg = arg };
 	struct nlmsghdr *nlh;
+	int err;
 
 	nlh = msg_init(MDIO_GENL_XFER, NLM_F_REQUEST | NLM_F_ACK);
 	if (!nlh)
@@ -678,11 +683,17 @@ int mdio_xfer(const char *bus, struct mdio_prog *prog,
 	mnl_attr_put(nlh, MDIO_NLA_PROG, prog->len * sizeof(*prog->insns),
 		     prog->insns);
 
-	mnl_attr_put_u16(nlh, MDIO_NLA_TIMEOUT, 1000);
+	mnl_attr_put_u16(nlh, MDIO_NLA_TIMEOUT, timeout_ms);
 
-	return msg_query(nlh, mdio_xfer_cb, &xfer);
+	err = msg_query(nlh, mdio_xfer_cb, &xfer);
+	return xfer.err ? : err;
 }
 
+int mdio_xfer(const char *bus, struct mdio_prog *prog,
+	      mdio_xfer_cb_t cb, void *arg)
+{
+	return mdio_xfer_timeout(bus, prog, cb, arg, 1000);
+}
 
 int mdio_for_each(const char *match,
 		  int (*cb)(const char *bus, void *arg), void *arg)

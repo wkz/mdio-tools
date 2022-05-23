@@ -100,6 +100,8 @@ struct mdio_ops {
 
 int mdio_raw_exec (struct mdio_ops *ops, int argc, char **argv);
 
+int mdio_xfer_timeout(const char *bus, struct mdio_prog *prog,
+		      mdio_xfer_cb_t cb, void *arg, uint16_t timeout_ms);
 int mdio_xfer(const char *bus, struct mdio_prog *prog,
 	      mdio_xfer_cb_t cb, void *arg);
 
