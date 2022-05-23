@@ -142,6 +142,7 @@ const struct family peridot_family = {
 
 	.dev_atu_parse = opal_dev_atu_parse,
 	.dev_vtu_parse = peridot_dev_vtu_parse,
+	.dev_stu_parse = peridot_dev_stu_parse,
 };
 
 const struct family amethyst_family = {
