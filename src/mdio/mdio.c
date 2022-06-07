@@ -552,13 +552,13 @@ int mdio_common_bench_cb(uint32_t *data, int len, int err, void *_start)
 		printf("Performed 1000 reads in ");
 
 	if (end.tv_sec)
-		printf("%ld.%2.2lds\n", end.tv_sec, end.tv_nsec / 10000000);
+		printf("%"PRId64".%2.2"PRId64"s\n", (int64_t)end.tv_sec, (int64_t)end.tv_nsec / 10000000);
 	else if (end.tv_nsec > 1000000)
-		printf("%ldms\n", end.tv_nsec / 1000000);
+		printf("%"PRId64"ms\n", (int64_t)end.tv_nsec / 1000000);
 	else if (end.tv_nsec > 1000)
-		printf("%ldus\n", end.tv_nsec / 1000);
+		printf("%"PRId64"us\n", (int64_t)end.tv_nsec / 1000);
 	else
-		printf("%ldns\n", end.tv_nsec);
+		printf("%"PRId64"ns\n", (int64_t)end.tv_nsec);
 
 	return err;
 }
