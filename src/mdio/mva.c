@@ -194,4 +194,4 @@ int mva_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&pdev.dev, argc, argv);
 }
-DEFINE_CMD(mva, mva_exec);
+DEFINE_CMD("mva", mva_exec);

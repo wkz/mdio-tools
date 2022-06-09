@@ -68,4 +68,4 @@ int xrs_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&xdev.dev, argc, argv);
 }
-DEFINE_CMD(xrs, xrs_exec);
+DEFINE_CMD("xrs", xrs_exec);

@@ -549,4 +549,4 @@ static int mvls_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&mdev.dev, argc, argv);
 }
-DEFINE_CMD(mvls, mvls_exec);
+DEFINE_CMD("mvls", mvls_exec);

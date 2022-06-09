@@ -54,7 +54,7 @@ struct cmd {
 
 #define DEFINE_CMD(_name, _exec) \
   __attribute__(( section("cmds"), aligned(__alignof__(struct cmd)) )) \
-  struct cmd _name ## _cmd = { .name = #_name, .exec = _exec }
+  struct cmd _exec ## _cmd = { .name = _name, .exec = _exec }
 
 extern struct cmd __start_cmds;
 extern struct cmd __stop_cmds;
