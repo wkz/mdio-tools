@@ -124,7 +124,7 @@ int mmd_exec(const char *bus, int argc, char **argv)
 		return 1;
 
 	if (!(pdev.id & MDIO_PHY_ID_C45)) {
-		fprintf(stderr, "ERROR: Expected Clause 24 (PRTAD:DEVAD) address\n");
+		fprintf(stderr, "ERROR: Expected Clause 45 (PRTAD:DEVAD) address\n");
 		return 1;
 	}
 
