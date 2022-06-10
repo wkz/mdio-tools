@@ -103,12 +103,13 @@ int phy_exec(const char *bus, int argc, char **argv)
 }
 DEFINE_CMD("phy", phy_exec);
 
-int mmd_exec(const char *bus, int argc, char **argv)
+int mmd_exec_with(const struct mdio_driver *drv,
+		  const char *bus, int argc, char **argv)
 {
 	struct phy_device pdev = {
 		.dev = {
 			.bus = bus,
-			.driver = &phy_driver,
+			.driver = drv,
 
 			.mem = {
 				.stride = 1,
@@ -130,4 +131,60 @@ int mmd_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&pdev.dev, argc, argv);
 }
+
+int mmd_exec(const char *bus, int argc, char **argv)
+{
+	return mmd_exec_with(&phy_driver, bus, argc, argv);
+}
 DEFINE_CMD("mmd", mmd_exec);
+
+static int mmd_c22_read(struct mdio_device *dev, struct mdio_prog *prog,
+			uint32_t reg)
+{
+	struct phy_device *pdev = (void *)dev;
+	uint8_t prtad = (pdev->id & MDIO_PHY_ID_PRTAD) >> 5;
+	uint8_t devad = pdev->id & MDIO_PHY_ID_DEVAD;
+	uint16_t ctrl = devad;
+
+	/* Set the address */
+	ctrl = devad;
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(13),  IMM(ctrl)));
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(14),  IMM(reg)));
+
+	/* Read out the data */
+	ctrl |= 1 << 14;
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(13),  IMM(ctrl)));
+	mdio_prog_push(prog, INSN(READ,  IMM(prtad), IMM(14),  REG(0)));
+	return 0;
+}
+
+static int mmd_c22_write(struct mdio_device *dev, struct mdio_prog *prog,
+			 uint32_t reg, uint32_t val)
+{
+	struct phy_device *pdev = (void *)dev;
+	uint8_t prtad = (pdev->id & MDIO_PHY_ID_PRTAD) >> 5;
+	uint8_t devad = pdev->id & MDIO_PHY_ID_DEVAD;
+	uint16_t ctrl = devad;
+
+	/* Set the address */
+	ctrl = devad;
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(13),  IMM(ctrl)));
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(14),  IMM(reg)));
+
+	/* Write the data */
+	ctrl |= 1 << 14;
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(13),  IMM(ctrl)));
+	mdio_prog_push(prog, INSN(WRITE, IMM(prtad), IMM(14),  val));
+	return 0;
+}
+
+static const struct mdio_driver mmd_c22_driver = {
+	.read = mmd_c22_read,
+	.write = mmd_c22_write,
+};
+
+int mmd_c22_exec(const char *bus, int argc, char **argv)
+{
+	return mmd_exec_with(&mmd_c22_driver, bus, argc, argv);
+}
+DEFINE_CMD("mmd-c22", mmd_c22_exec);
