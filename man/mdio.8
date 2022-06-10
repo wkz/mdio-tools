@@ -76,6 +76,19 @@ Clause 45 (XMDIO) MMD using address
 .It Ar REG
 := 0-0xffff
 .El
+.It Cm mmd-c22 Ar PRTAD:DEVAD
+Clause 45 (XMDIO) MMD, accessed over Clause 22 registers 13 and 14,
+using address
+.Ar PRTAD:DEVAD .
+.Pp
+.Bl -tag -compact
+.It Ar PRTAD
+:= 0-31
+.It Ar DEVAD
+:= 0-31
+.It Ar REG
+:= 0-0xffff
+.El
 .It Cm mva Ar PHYAD
 Marvell Alaska (mv88e1xxx) paged PHY. Register 22 is a paging register
 used to expand the register space.
