@@ -101,7 +101,7 @@ int phy_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&pdev.dev, argc, argv);
 }
-DEFINE_CMD(phy, phy_exec);
+DEFINE_CMD("phy", phy_exec);
 
 int mmd_exec(const char *bus, int argc, char **argv)
 {
@@ -130,4 +130,4 @@ int mmd_exec(const char *bus, int argc, char **argv)
 
 	return mdio_common_exec(&pdev.dev, argc, argv);
 }
-DEFINE_CMD(mmd, mmd_exec);
+DEFINE_CMD("mmd", mmd_exec);
