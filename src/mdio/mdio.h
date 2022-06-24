@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <linux/mdio-netlink.h>
 
+#define BIT(_n) (1 << (_n))
+
 #define ARRAY_SIZE(_a) (sizeof(_a) / sizeof((_a)[0]))
 #define container_of(ptr, type, member) ({	\
 	const typeof( ((type *)0)->member )	\
