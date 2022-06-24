@@ -172,6 +172,9 @@ int mmd_exec_status(struct phy_device *pdev, int argc, char **argv)
 	int err;
 
 	switch (FIELD_GET(MDIO_PHY_ID_DEVAD, pdev->id)) {
+	case MDIO_MMD_PMAPMD:
+		dev = &pma_print_device;
+		break;
 	default:
 		dev = &null_print_device;
 		break;

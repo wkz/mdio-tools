@@ -4,6 +4,7 @@
 #include <linux/mdio.h>
 #include <net/if.h>
 
+#include "linux/bitfield.h"
 #include "mdio.h"
 
 void print_bool(const char *name, int on)
@@ -221,3 +222,252 @@ void print_mmd_devs(uint16_t devs_hi, uint16_t devs_lo)
 	print_bool("c22", devs & MDIO_DEVS_C22PRESENT);
 	putchar('\n');
 }
+
+static void print_pma_ctrl1(uint16_t val)
+{
+	printf("CTRL1(0x00): %#.4x\n", val);
+
+	fputs("  flags: ", stdout);
+	print_bool("reset", val & MDIO_CTRL1_RESET);
+	putchar(' ');
+
+	print_bool("low-power", val & MDIO_CTRL1_LPOWER);
+	putchar(' ');
+
+	print_bool("remote-loopback", val & BIT(1));
+	putchar(' ');
+
+	print_bool("local-loopback", val & MDIO_PMA_CTRL1_LOOPBACK);
+	putchar('\n');
+
+	printf("  speed: %s\n", get_speed(val));
+}
+
+static void print_pma_stat1(uint16_t val)
+{
+	printf("STAT1(0x01): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("pias", val & BIT(9));
+	putchar(' ');
+
+	print_bool("peas", val & BIT(8));
+	putchar(' ');
+
+	print_bool("low-power", val & MDIO_STAT1_LPOWERABLE);
+	putchar('\n');
+
+	fputs("  flags:        ", stdout);
+	print_bool("fault", val & MDIO_STAT1_FAULT);
+	putchar(' ');
+
+	print_bool("link", val & MDIO_STAT1_LSTATUS);
+	putchar('\n');
+}
+
+static void print_pma_speed(uint16_t val)
+{
+	printf("SPEED(0x04): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("100g", val & BIT(9));
+	putchar(' ');
+
+	print_bool("40g", val & BIT(8));
+	putchar(' ');
+
+	print_bool("10g/1g", val & BIT(7));
+	putchar(' ');
+
+	print_bool("10", val & MDIO_PMA_SPEED_10);
+	putchar(' ');
+
+	print_bool("100", val & MDIO_PMA_SPEED_100);
+	putchar(' ');
+
+	print_bool("1000", val & MDIO_PMA_SPEED_1000);
+	putchar(' ');
+
+	print_bool("10-ts", val & MDIO_PMA_SPEED_10P);
+	putchar(' ');
+
+	print_bool("2-tl", val & MDIO_PMA_SPEED_2B);
+	putchar(' ');
+
+	print_bool("10g", val & MDIO_SPEED_10G);
+	putchar('\n');
+}
+
+static const char *get_pma_type(uint16_t val)
+{
+	switch (FIELD_GET(MDIO_PMA_CTRL2_TYPE, val)) {
+	case MDIO_PMA_CTRL2_10GBCX4:
+		return "10g-cx4";
+	case MDIO_PMA_CTRL2_10GBEW:
+		return "10g-ew";
+	case MDIO_PMA_CTRL2_10GBLW:
+		return "10g-lw";
+	case MDIO_PMA_CTRL2_10GBSW:
+		return "10g-sw";
+	case MDIO_PMA_CTRL2_10GBLX4:
+		return "10g-lx4";
+	case MDIO_PMA_CTRL2_10GBER:
+		return "10g-er";
+	case MDIO_PMA_CTRL2_10GBLR:
+		return "10g-lr";
+	case MDIO_PMA_CTRL2_10GBSR:
+		return "10g-sr";
+	case MDIO_PMA_CTRL2_10GBLRM:
+		return "10g-lrm";
+	case MDIO_PMA_CTRL2_10GBT:
+		return "10g-t";
+	case MDIO_PMA_CTRL2_10GBKX4:
+		return "10g-kx4";
+	case MDIO_PMA_CTRL2_10GBKR:
+		return "10g-kr";
+	case MDIO_PMA_CTRL2_1000BT:
+		return "1000-t";
+	case MDIO_PMA_CTRL2_1000BKX:
+		return "1000-kx";
+	case MDIO_PMA_CTRL2_100BTX:
+		return "100-tx";
+	case MDIO_PMA_CTRL2_10BT:
+		return "10-t";
+	/* TODO: the many, many 40G and 100G types... */
+	case MDIO_PMA_CTRL2_2_5GBT:
+		return "2.25g-t";
+	case MDIO_PMA_CTRL2_5GBT:
+		return "2.5g-t";
+	default:
+		return "unknown";
+	}
+}
+
+static void print_pma_ctrl2(uint16_t val)
+{
+	printf("CTRL2(0x07): %#.4x\n", val);
+
+	fputs("  flags: ", stdout);
+	print_bool("pias", val & BIT(9));
+	putchar(' ');
+
+	print_bool("peas", val & BIT(8));
+	putchar('\n');
+
+	printf("  type:  %s\n", get_pma_type(val));
+}
+
+static void print_mmd_stat2_flags(uint16_t val)
+{
+	fputs("  flags:        ", stdout);
+	print_bool("present", (val & MDIO_STAT2_DEVPRST) ==
+			      MDIO_STAT2_DEVPRST_VAL);
+	putchar(' ');
+
+	print_bool("tx-fault", val & MDIO_STAT2_TXFAULT);
+	putchar(' ');
+
+	print_bool("rx-fault", val & MDIO_STAT2_RXFAULT);
+	putchar('\n');
+}
+
+static void print_pma_stat2(uint16_t val)
+{
+	printf("STAT2(0x08): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("tx-fault", val & MDIO_PMA_STAT2_TXFLTABLE);
+	putchar(' ');
+
+	print_bool("rx-fault", val & MDIO_PMA_STAT2_RXFLTABLE);
+	putchar(' ');
+
+	print_bool("ext-register", val & MDIO_PMA_STAT2_EXTABLE);
+	putchar(' ');
+
+	print_bool("tx-disable", val & MDIO_PMD_STAT2_TXDISAB);
+	putchar(' ');
+
+	print_bool("local-loopback", val & MDIO_PMA_STAT2_LBABLE);
+	fputs("\n"
+	      "                ", stdout);
+
+	print_bool("10g-sr", val & MDIO_PMA_STAT2_10GBSR);
+	putchar(' ');
+
+	print_bool("10g-lr", val & MDIO_PMA_STAT2_10GBLR);
+	putchar(' ');
+
+	print_bool("10g-er", val & MDIO_PMA_STAT2_10GBER);
+	putchar(' ');
+
+	print_bool("10g-lx4", val & MDIO_PMA_STAT2_10GBLX4);
+	putchar(' ');
+
+	print_bool("10g-sw", val & MDIO_PMA_STAT2_10GBSW);
+	putchar(' ');
+
+	print_bool("10g-lw", val & MDIO_PMA_STAT2_10GBLW);
+	putchar(' ');
+
+	print_bool("10g-ew", val & MDIO_PMA_STAT2_10GBEW);
+	putchar('\n');
+
+	print_mmd_stat2_flags(val);
+}
+
+static void print_pma_extable(uint16_t val)
+{
+	printf("EXTABLE(0x0B): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("10g-cx4", val & MDIO_PMA_EXTABLE_10GCX4);
+	putchar(' ');
+
+	print_bool("10g-lrm", val & MDIO_PMA_EXTABLE_10GBLRM);
+	putchar(' ');
+
+	print_bool("10g-t", val & MDIO_PMA_EXTABLE_10GBT);
+	putchar(' ');
+
+	print_bool("10g-kx4", val & MDIO_PMA_EXTABLE_10GBKX4);
+	putchar(' ');
+
+	print_bool("10g-kr", val & MDIO_PMA_EXTABLE_10GBKR);
+	putchar(' ');
+
+	print_bool("1000-t", val & MDIO_PMA_EXTABLE_1000BT);
+	fputs("\n"
+	      "                ", stdout);
+
+	print_bool("1000-kx", val & MDIO_PMA_EXTABLE_1000BKX);
+	putchar(' ');
+
+	print_bool("100-tx", val & MDIO_PMA_EXTABLE_100BTX);
+	putchar(' ');
+
+	print_bool("10-t", val & MDIO_PMA_EXTABLE_10BT);
+	putchar(' ');
+
+	print_bool("2.5g/5g-t", val & MDIO_PMA_EXTABLE_NBT);
+	putchar('\n');
+}
+
+static void print_pma_extra(uint32_t *data)
+{
+	print_pma_ctrl2(data[7]);
+	putchar('\n');
+	print_pma_stat2(data[8]);
+
+	if (data[8] & MDIO_PMA_STAT2_EXTABLE) {
+		putchar('\n');
+		print_pma_extable(data[11]);
+	}
+}
+
+const struct mmd_print_device pma_print_device = {
+	.print_ctrl1 = print_pma_ctrl1,
+	.print_stat1 = print_pma_stat1,
+	.print_speed = print_pma_speed,
+	.print_extra = print_pma_extra,
+};

@@ -80,6 +80,8 @@ struct mmd_print_device {
 	void (*print_extra)(uint32_t *data);
 };
 
+extern const struct mmd_print_device pma_print_device;
+
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
 int mdio_parse_reg(const char *str, uint16_t *reg, bool is_c45);
