@@ -4,6 +4,7 @@
 #include <linux/mdio.h>
 
 #include "mdio.h"
+#include "linux/bitfield.h"
 
 struct phy_device {
 	struct mdio_device dev;
@@ -109,8 +110,10 @@ int phy_exec(const char *bus, int argc, char **argv)
 }
 DEFINE_CMD("phy", phy_exec);
 
-int mmd_status_cb(uint32_t *data, int len, int err, void *priv)
+int mmd_status_cb(uint32_t *data, int len, int err, void *arg)
 {
+	const struct mmd_print_device *dev = arg;
+
 	if (len != 16)
 		return 1;
 
@@ -120,17 +123,42 @@ int mmd_status_cb(uint32_t *data, int len, int err, void *priv)
 		return 1;
 	}
 
+	if (dev->print_ctrl1) {
+		dev->print_ctrl1(data[0]);
+		putchar('\n');
+	}
+
+	if (dev->print_stat1) {
+		dev->print_stat1(data[1]);
+		putchar('\n');
+	}
+
 	print_mmd_devid(data[2], data[3]);
 	putchar('\n');
+
+	if (dev->print_speed) {
+		dev->print_speed(data[4]);
+		putchar('\n');
+	}
+
 	print_mmd_devs(data[6], data[5]);
 	putchar('\n');
+
+	if (dev->print_extra) {
+		dev->print_extra(data);
+		putchar('\n');
+	}
+
 	print_mmd_pkgid(data[14], data[15]);
 
 	return err;
 }
 
+static const struct mmd_print_device null_print_device = { 0 };
+
 int mmd_exec_status(struct phy_device *pdev, int argc, char **argv)
 {
+	const struct mmd_print_device *dev;
 	struct mdio_nl_insn insns[] = {
 		INSN(ADD, IMM(0), IMM(0), REG(1)),
 
@@ -143,7 +171,13 @@ int mmd_exec_status(struct phy_device *pdev, int argc, char **argv)
 	struct mdio_prog prog = MDIO_PROG_FIXED(insns);
 	int err;
 
-	err = mdio_xfer(pdev->dev.bus, &prog, mmd_status_cb, NULL);
+	switch (FIELD_GET(MDIO_PHY_ID_DEVAD, pdev->id)) {
+	default:
+		dev = &null_print_device;
+		break;
+	}
+
+	err = mdio_xfer(pdev->dev.bus, &prog, mmd_status_cb, (void *)dev);
 	if (err) {
 		fprintf(stderr, "ERROR: Unable to read status (%d)\n", err);
 		return 1;
