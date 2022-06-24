@@ -113,3 +113,21 @@ void print_phy_id(uint16_t id_hi, uint16_t id_lo)
 
 	printf("ID(0x02/0x03): %#.8x\n", id);
 }
+
+void print_phy_estatus(uint16_t val)
+{
+	printf("ESTATUS(0x0F): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("1000-x-f", val & ESTATUS_1000_XFULL);
+	putchar(' ');
+
+	print_bool("1000-x-h", val & ESTATUS_1000_XHALF);
+	putchar(' ');
+
+	print_bool("1000-t-f", val & ESTATUS_1000_TFULL);
+	putchar(' ');
+
+	print_bool("1000-t-h", val & ESTATUS_1000_THALF);
+	putchar('\n');
+}

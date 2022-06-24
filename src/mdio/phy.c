@@ -34,7 +34,7 @@ static const struct mdio_driver phy_driver = {
 
 int phy_status_cb(uint32_t *data, int len, int err, void *_null)
 {
-	if (len != 4)
+	if (len != 5)
 		return 1;
 
 	if (data[2] == 0xffff && data[3] == 0xffff) {
@@ -47,6 +47,10 @@ int phy_status_cb(uint32_t *data, int len, int err, void *_null)
 	print_phy_bmsr(data[1]);
 	putchar('\n');
 	print_phy_id(data[2], data[3]);
+	if (data[1] & BMSR_ESTATEN) {
+		putchar('\n');
+		print_phy_estatus(data[4]);
+	}
 
 	return err;
 }
@@ -61,6 +65,8 @@ int phy_exec_status(struct phy_device *pdev, int argc, char **argv)
 		INSN(READ,  IMM(pdev->id), IMM(2),  REG(0)),
 		INSN(EMIT,  REG(0),   0,         0),
 		INSN(READ,  IMM(pdev->id), IMM(3),  REG(0)),
+		INSN(EMIT,  REG(0),   0,         0),
+		INSN(READ,  IMM(pdev->id), IMM(15),  REG(0)),
 		INSN(EMIT,  REG(0),   0,         0),
 	};
 	struct mdio_prog prog = MDIO_PROG_FIXED(insns);
