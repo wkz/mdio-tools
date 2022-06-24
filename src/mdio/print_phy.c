@@ -19,15 +19,37 @@ void print_bool(const char *name, int on)
 		fputs("\e[0m", stdout);
 }
 
+static const char *get_speed(uint16_t val)
+{
+	switch (val & MDIO_CTRL1_SPEEDSELEXT) {
+	case MDIO_PMA_CTRL1_SPEED1000:
+		return "1000";
+	case MDIO_PMA_CTRL1_SPEED100:
+		return "100";
+	case 0:
+		return "10";
+	}
+
+	switch (val & MDIO_CTRL1_SPEEDSEL) {
+	case (MDIO_CTRL1_SPEEDSELEXT | 0x0c):
+		return "100g";
+	case (MDIO_CTRL1_SPEEDSELEXT | 0x08):
+		return "40g";
+	case MDIO_CTRL1_SPEED10G:
+		return "10g";
+	case MDIO_CTRL1_SPEED10P2B:
+		return "10-ts/2-tl";
+	case MDIO_CTRL1_SPEED2_5G:
+		return "2.5g";
+	case MDIO_CTRL1_SPEED5G:
+		return "5g";
+	default:
+		return "unknown";
+	}
+}
+
 void print_phy_bmcr(uint16_t val)
 {
-	int speed = 10;
-
-	if (val & BMCR_SPEED100)
-		speed = 100;
-	if (val & BMCR_SPEED1000)
-		speed = 1000;
-
 	printf("BMCR(0x00): %#.4x\n", val);
 
 	fputs("  flags: ", stdout);
@@ -53,7 +75,7 @@ void print_phy_bmcr(uint16_t val)
 	print_bool("collision-test", val & BMCR_CTST);
 	putchar('\n');
 
-	printf("  speed: %d-%s\n", speed,
+	printf("  speed: %s-%s\n", get_speed(val),
 	       (val & BMCR_FULLDPLX) ? "full" : "half");
 }
 
