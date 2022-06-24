@@ -69,6 +69,10 @@ void print_phy_bmsr   (uint16_t val);
 void print_phy_id     (uint16_t id_hi, uint16_t id_lo);
 void print_phy_estatus(uint16_t val);
 
+void print_mmd_devid(uint16_t id_hi, uint16_t id_lo);
+void print_mmd_pkgid(uint16_t id_hi, uint16_t id_lo);
+void print_mmd_devs (uint16_t devs_hi, uint16_t devs_lo);
+
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
 int mdio_parse_reg(const char *str, uint16_t *reg, bool is_c45);

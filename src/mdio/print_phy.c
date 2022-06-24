@@ -153,3 +153,71 @@ void print_phy_estatus(uint16_t val)
 	print_bool("1000-t-h", val & ESTATUS_1000_THALF);
 	putchar('\n');
 }
+
+void print_mmd_devid(uint16_t id_hi, uint16_t id_lo)
+{
+	uint32_t id = (id_hi << 16) | id_lo;
+
+	printf("DEVID(0x02/0x03): %#.8x\n", id);
+}
+
+void print_mmd_pkgid(uint16_t id_hi, uint16_t id_lo)
+{
+	uint32_t id = (id_hi << 16) | id_lo;
+
+	printf("PKGID(0x0E/0x0F): %#.8x\n", id);
+}
+
+void print_mmd_devs(uint16_t devs_hi, uint16_t devs_lo)
+{
+	uint32_t devs = devs_hi << 16 | devs_lo;
+
+	printf("DEVS(0x06/0x05): %#.8x\n", devs);
+
+	fputs("  devices: ", stdout);
+	print_bool("vendor2", devs & MDIO_DEVS_VEND2);
+	putchar(' ');
+
+	print_bool("vendor1", devs & MDIO_DEVS_VEND1);
+	putchar(' ');
+
+	print_bool("c22-ext", devs & MDIO_DEVS_C22EXT);
+	putchar(' ');
+
+	print_bool("pma4", devs & MDIO_DEVS_PRESENT(11));
+	putchar(' ');
+
+	print_bool("pma3", devs & MDIO_DEVS_PRESENT(10));
+	putchar(' ');
+
+	print_bool("pma2", devs & MDIO_DEVS_PRESENT(9));
+	putchar(' ');
+
+	print_bool("pma1", devs & MDIO_DEVS_PRESENT(8));
+	fputs("\n"
+	      "           ", stdout);
+
+	print_bool("aneg", devs & MDIO_DEVS_AN);
+	putchar(' ');
+
+	print_bool("tc", devs & MDIO_DEVS_TC);
+	putchar(' ');
+
+	print_bool("dte-xs", devs & MDIO_DEVS_DTEXS);
+	putchar(' ');
+
+	print_bool("phy-xs", devs & MDIO_DEVS_PHYXS);
+	putchar(' ');
+
+	print_bool("pcs", devs & MDIO_DEVS_PCS);
+	putchar(' ');
+
+	print_bool("wis", devs & MDIO_DEVS_WIS);
+	putchar(' ');
+
+	print_bool("pma/pmd", devs & MDIO_DEVS_PMAPMD);
+	putchar(' ');
+
+	print_bool("c22", devs & MDIO_DEVS_C22PRESENT);
+	putchar('\n');
+}
