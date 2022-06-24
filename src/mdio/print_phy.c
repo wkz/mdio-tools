@@ -609,3 +609,58 @@ const struct mmd_print_device pcs_print_device = {
 	.print_speed = print_pcs_speed,
 	.print_extra = print_pcs_extra,
 };
+
+static void print_an_ctrl1(uint16_t val)
+{
+	printf("CTRL1(0x00): %#.4x\n", val);
+
+	fputs("  flags: ", stdout);
+	print_bool("reset", val & MDIO_CTRL1_RESET);
+	putchar(' ');
+
+	print_bool("ext-page", val & MDIO_AN_CTRL1_XNP);
+	putchar(' ');
+
+	print_bool("aneg-enable", val & MDIO_AN_CTRL1_ENABLE);
+	putchar(' ');
+
+	print_bool("aneg-restart", val & MDIO_AN_CTRL1_RESTART);
+	putchar('\n');
+}
+
+static void print_an_stat1(uint16_t val)
+{
+	printf("STAT1(0x01): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("aneg-capable", val & MDIO_AN_STAT1_ABLE);
+	putchar(' ');
+
+	print_bool("partner-capable", val & MDIO_AN_STAT1_LPABLE);
+	putchar('\n');
+
+	fputs("  flags:        ", stdout);
+	print_bool("ext-page", val & MDIO_AN_STAT1_XNP);
+	putchar(' ');
+
+	print_bool("parallel-fault", val & MDIO_STAT1_FAULT);
+	putchar(' ');
+
+	print_bool("page", val & MDIO_AN_STAT1_PAGE);
+	putchar(' ');
+
+	print_bool("aneg-complete", val & MDIO_AN_STAT1_COMPLETE);
+	putchar(' ');
+
+	print_bool("remote-fault", val & MDIO_AN_STAT1_RFAULT);
+	fputs("\n"
+	      "                ", stdout);
+
+	print_bool("link", val & MDIO_STAT1_LSTATUS);
+	putchar('\n');
+}
+
+const struct mmd_print_device an_print_device = {
+	.print_ctrl1 = print_an_ctrl1,
+	.print_stat1 = print_an_stat1,
+};

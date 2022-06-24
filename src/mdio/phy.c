@@ -178,6 +178,9 @@ int mmd_exec_status(struct phy_device *pdev, int argc, char **argv)
 	case MDIO_MMD_PCS:
 		dev = &pcs_print_device;
 		break;
+	case MDIO_MMD_AN:
+		dev = &an_print_device;
+		break;
 	default:
 		dev = &null_print_device;
 		break;
