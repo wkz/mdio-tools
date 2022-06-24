@@ -471,3 +471,141 @@ const struct mmd_print_device pma_print_device = {
 	.print_speed = print_pma_speed,
 	.print_extra = print_pma_extra,
 };
+
+static void print_pcs_ctrl1(uint16_t val)
+{
+	printf("CTRL1(0x00): %#.4x\n", val);
+
+	fputs("  flags: ", stdout);
+	print_bool("reset", val & MDIO_CTRL1_RESET);
+	putchar(' ');
+
+	print_bool("loopback", val & MDIO_PCS_CTRL1_LOOPBACK);
+	putchar(' ');
+
+	print_bool("low-power", val & MDIO_CTRL1_LPOWER);
+	putchar(' ');
+
+	print_bool("lpi-clock-stop", val & MDIO_PCS_CTRL1_CLKSTOP_EN);
+	putchar(' ');
+
+	putchar('\n');
+
+	printf("  speed: %s\n", get_speed(val));
+}
+
+static void print_pcs_stat1(uint16_t val)
+{
+	printf("STAT1(0x01): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("lpi-clock-stop", val & BIT(6));
+	putchar(' ');
+
+	print_bool("low-power", val & MDIO_STAT1_LPOWERABLE);
+	putchar('\n');
+
+	fputs("  flags:        ", stdout);
+	print_bool("rx-lpi-recv", val & BIT(11));
+	putchar(' ');
+
+	print_bool("tx-lpi-recv", val & BIT(10));
+	putchar(' ');
+
+	print_bool("rx-lpi-ind", val & BIT(9));
+	putchar(' ');
+
+	print_bool("tx-lpi-ind", val & BIT(8));
+	putchar(' ');
+
+	print_bool("fault", val & MDIO_STAT1_FAULT);
+	putchar(' ');
+
+	print_bool("link", val & MDIO_STAT1_LSTATUS);
+	putchar('\n');
+}
+
+static void print_pcs_speed(uint16_t val)
+{
+	printf("SPEED(0x04): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("100g", val & BIT(3));
+	putchar(' ');
+
+	print_bool("40g", val & BIT(2));
+	putchar(' ');
+
+	print_bool("10-ts/2-tl", val & MDIO_PCS_SPEED_10P2B);
+	putchar(' ');
+
+	print_bool("10g", val & MDIO_SPEED_10G);
+	putchar('\n');
+}
+
+static const char *get_pcs_type(uint16_t val)
+{
+	switch (FIELD_GET(MDIO_PCS_CTRL2_TYPE, val)) {
+	case 0x0005:
+		return "100g-r";
+	case 0x0004:
+		return "40g-r";
+	case MDIO_PCS_CTRL2_10GBT:
+		return "10g-t";
+	case MDIO_PCS_CTRL2_10GBW:
+		return "10g-w";
+	case MDIO_PCS_CTRL2_10GBX:
+		return "10g-x";
+	case MDIO_PCS_CTRL2_10GBR:
+		return "10g-r";
+	default:
+		return "unknown";
+	}
+}
+
+static void print_pcs_ctrl2(uint16_t val)
+{
+	printf("CTRL2(0x07): %#.4x\n", val);
+
+	printf("  type: %s\n", get_pcs_type(val));
+}
+
+static void print_pcs_stat2(uint16_t val)
+{
+	printf("STAT2(0x08): %#.4x\n", val);
+
+	fputs("  capabilities: ", stdout);
+	print_bool("100g-r", val & BIT(5));
+	putchar(' ');
+
+	print_bool("40g-r", val & BIT(4));
+	putchar(' ');
+
+	print_bool("10g-t", val & BIT(3));
+	putchar(' ');
+
+	print_bool("10g-w", val & MDIO_PCS_STAT2_10GBW);
+	putchar(' ');
+
+	print_bool("10g-x", val & MDIO_PCS_STAT2_10GBX);
+	putchar(' ');
+
+	print_bool("10g-r", val & MDIO_PCS_STAT2_10GBR);
+	putchar('\n');
+
+	print_mmd_stat2_flags(val);
+}
+
+static void print_pcs_extra(uint32_t *data)
+{
+	print_pcs_ctrl2(data[7]);
+	putchar('\n');
+	print_pcs_stat2(data[8]);
+}
+
+const struct mmd_print_device pcs_print_device = {
+	.print_ctrl1 = print_pcs_ctrl1,
+	.print_stat1 = print_pcs_stat1,
+	.print_speed = print_pcs_speed,
+	.print_extra = print_pcs_extra,
+};

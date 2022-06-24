@@ -81,6 +81,7 @@ struct mmd_print_device {
 };
 
 extern const struct mmd_print_device pma_print_device;
+extern const struct mmd_print_device pcs_print_device;
 
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
