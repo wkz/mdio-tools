@@ -62,19 +62,19 @@ void print_phy_bmsr(uint16_t val)
 	printf("BMSR(0x01): %#.4x\n", val);
 
 	fputs("  capabilities: ", stdout);
-	print_bool("100-b4", val & BMSR_100BASE4);
+	print_bool("100-t4", val & BMSR_100BASE4);
 	putchar(' ');
 
-	print_bool("100-f", val & BMSR_100FULL);
+	print_bool("100-tx-f", val & BMSR_100FULL);
 	putchar(' ');
 
-	print_bool("100-h", val & BMSR_100HALF);
+	print_bool("100-tx-h", val & BMSR_100HALF);
 	putchar(' ');
 
-	print_bool("10-f", val & BMSR_10FULL);
+	print_bool("10-t-f", val & BMSR_10FULL);
 	putchar(' ');
 
-	print_bool("10-h", val & BMSR_10HALF);
+	print_bool("10-t-h", val & BMSR_10HALF);
 	putchar(' ');
 
 	print_bool("100-t2-f", val & BMSR_100FULL2);
