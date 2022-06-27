@@ -7,8 +7,6 @@
 
 #include "mdio.h"
 
-#define BIT(_n) (1 << (_n))
-
 #define MVLS_CMD  0
 #define MVLS_CMD_BUSY BIT(15)
 #define MVLS_CMD_C22  BIT(12)

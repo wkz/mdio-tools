@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <linux/mdio-netlink.h>
 
+#define BIT(_n) (1 << (_n))
+
 #define ARRAY_SIZE(_a) (sizeof(_a) / sizeof((_a)[0]))
 #define container_of(ptr, type, member) ({	\
 	const typeof( ((type *)0)->member )	\
@@ -62,9 +64,25 @@ extern struct cmd __stop_cmds;
 int mdio_raw_read_cb (uint32_t *data, int len, int err, void *_null);
 int mdio_raw_write_cb(uint32_t *data, int len, int err, void *_null);
 
-void print_phy_bmcr(uint16_t val);
-void print_phy_bmsr(uint16_t val);
-void print_phy_id  (uint16_t id_hi, uint16_t id_lo);
+void print_phy_bmcr   (uint16_t val);
+void print_phy_bmsr   (uint16_t val);
+void print_phy_id     (uint16_t id_hi, uint16_t id_lo);
+void print_phy_estatus(uint16_t val);
+
+void print_mmd_devid(uint16_t id_hi, uint16_t id_lo);
+void print_mmd_pkgid(uint16_t id_hi, uint16_t id_lo);
+void print_mmd_devs (uint16_t devs_hi, uint16_t devs_lo);
+
+struct mmd_print_device {
+	void (*print_ctrl1)(uint16_t val);
+	void (*print_stat1)(uint16_t val);
+	void (*print_speed)(uint16_t val);
+	void (*print_extra)(uint32_t *data);
+};
+
+extern const struct mmd_print_device pma_print_device;
+extern const struct mmd_print_device pcs_print_device;
+extern const struct mmd_print_device an_print_device;
 
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
