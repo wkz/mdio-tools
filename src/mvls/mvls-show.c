@@ -127,9 +127,8 @@ void env_show_ports(struct env *env)
 	puts("\e[7mNETDEV    P  LINK  MO  FL  S  L  .1Q  PVID   FID\e[0m");
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
-		if (env->multichip)
-			printf("\e[2m\e[7mDEV:%x %-42s\e[0m\n",
-			       dev->index, dev->chip->id);
+		printf("\e[2m\e[7mDEV:%x %-42s\e[0m\n",
+		       dev->index, dev->chip->id);
 
 		TAILQ_FOREACH(port, &dev->ports, node) {
 			port_load_regs(port);
@@ -167,9 +166,8 @@ void env_show_atu(struct env *env)
 	puts("\e[7mADDRESS             FID  STATE      Q  F  0  1  2  3  4  5  6  7  8  9  a\e[0m");
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
-		if (env->multichip)
-			printf("\e[2m\e[7mDEV:%x %-67s\e[0m\n",
-			       dev->index, dev->chip->id);
+		printf("\e[2m\e[7mDEV:%x %-67s\e[0m\n",
+		       dev->index, dev->chip->id);
 
 		err = devlink_region_get(&env->dl, &dev->devlink, "atu",
 					 devlink_region_dup_cb, &atu);
@@ -214,9 +212,8 @@ void env_show_vtu(struct env *env)
 	puts("\e[7m VID   FID  SID  P  Q  F  0  1  2  3  4  5  6  7  8  9  a\e[0m");
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
-		if (env->multichip)
-			printf("\e[2m\e[7mDEV:%x %-51s\e[0m\n",
-			       dev->index, dev->chip->id);
+		printf("\e[2m\e[7mDEV:%x %-51s\e[0m\n",
+		       dev->index, dev->chip->id);
 
 		err = devlink_region_get(&env->dl, &dev->devlink, "vtu",
 					 devlink_region_dup_cb, &vtu);
@@ -268,9 +265,8 @@ void env_show_stu(struct env *env)
 	puts("\e[7mSID  0  1  2  3  4  5  6  7  8  9  a\e[0m");
 
 	TAILQ_FOREACH(dev, &env->devs, node) {
-		if (env->multichip)
-			printf("\e[2m\e[7mDEV:%x %-30s\e[0m\n",
-			       dev->index, dev->chip->id);
+		printf("\e[2m\e[7mDEV:%x %-30s\e[0m\n",
+		       dev->index, dev->chip->id);
 
 		err = devlink_region_get(&env->dl, &dev->devlink, "stu",
 					 devlink_region_dup_cb, &stu);

@@ -84,10 +84,29 @@ static int opal_dev_stu_parse(struct dev *dev,
 	return __dev_stu_parse(dev, kentry, entry, 4);
 }
 
-int opal_dev_atu_parse(struct dev *dev,
-		       struct mv88e6xxx_devlink_atu_entry *kentry,
-		       struct atu_entry *entry)
+static int prio_override_state(bool mc, int state)
 {
+	if ((mc) &&
+	    ((state == ATU_MC_PCY_PO) ||
+	     (state == ATU_MC_NRL_PO) ||
+	     (state == ATU_MC_MGMT_PO) ||
+	     (state == ATU_MC_PO)))
+		return 1;
+	else if ((state == ATU_UC_S_PCY_PO) ||
+		 (state == ATU_UC_S_NRL_PO) ||
+		 (state == ATU_UC_S_MGMT_PO) ||
+		 (state == ATU_UC_S_PO))
+		return 1;
+
+	return 0;
+}
+
+int __dev_atu_parse(struct dev *dev,
+		    struct mv88e6xxx_devlink_atu_entry *kentry,
+		    struct atu_entry *entry, bool have_fpri)
+{
+	int set_prio;
+
 	if (!bits(kentry->atu_data, 0, 4)) {
 		errno = ENODATA;
 		return -1;
@@ -101,14 +120,30 @@ int opal_dev_atu_parse(struct dev *dev,
 	entry->addr[4] = bits(kentry->atu_45, 8, 8);
 	entry->addr[5] = bits(kentry->atu_45, 0, 8);
 
-	/* TODO */
-	entry->qpri.set = 0;
-	entry->fpri.set = 0;
-
 	entry->lag = bit(kentry->atu_data, 15);
 	entry->portvec = bits(kentry->atu_data, 4, 11);
 	entry->state.uc = bits(kentry->atu_data, 0, 4);
+
+	set_prio = prio_override_state((entry->addr[0] & 1), entry->state.uc);
+	entry->qpri.set = set_prio;
+	entry->qpri.pri = set_prio ? bits(kentry->atu_op, 8, 3) : 0;
+	entry->fpri.set = have_fpri && set_prio;
+	entry->fpri.pri = (have_fpri && set_prio) ? bits(kentry->atu_op, 0, 3) : 0;
 	return 0;
+}
+
+int opal_dev_atu_parse(struct dev *dev,
+		       struct mv88e6xxx_devlink_atu_entry *kentry,
+		       struct atu_entry *entry)
+{
+	return __dev_atu_parse(dev, kentry, entry, false);
+}
+
+int peridot_dev_atu_parse(struct dev *dev,
+		       struct mv88e6xxx_devlink_atu_entry *kentry,
+		       struct atu_entry *entry)
+{
+	return __dev_atu_parse(dev, kentry, entry, true);
 }
 
 int opal_port_lag(struct port *port)
@@ -140,7 +175,7 @@ const struct family peridot_family = {
 	.port_lag = opal_port_lag,
 	.port_fid = opal_port_fid,
 
-	.dev_atu_parse = opal_dev_atu_parse,
+	.dev_atu_parse = peridot_dev_atu_parse,
 	.dev_vtu_parse = peridot_dev_vtu_parse,
 	.dev_stu_parse = peridot_dev_stu_parse,
 };
@@ -149,7 +184,7 @@ const struct family amethyst_family = {
 	.port_lag = opal_port_lag,
 	.port_fid = opal_port_fid,
 
-	.dev_atu_parse = opal_dev_atu_parse,
+	.dev_atu_parse = peridot_dev_atu_parse,
 	.dev_vtu_parse = peridot_dev_vtu_parse,
 	.dev_stu_parse = peridot_dev_stu_parse,
 };
