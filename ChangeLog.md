@@ -3,6 +3,22 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.2.0] - 2022-09-15
+---------------------
+
+### Added
+- mdio: A new addressing mode "mmd-c22": Used to access MMDs attached
+  to MDIO controllers without Clause 45 support by using registers 13
+  and 14 in the device's Clause 22 register space
+- mdio: Pretty print gigabit link capability information from a PHY's
+  extended status register
+- mdio: Pretty print lots of status information from MMDs (C45 PHYs)
+- mvls: Decode priority override information of ATU entries
+
+### Changed
+- mvls: Table listings now always prints out the device information,
+  even on single chip systems.
+
 [v1.1.1] - 2022-05-23
 ---------------------
 
