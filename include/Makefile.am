@@ -1,1 +1,1 @@
-EXTRA_DIST = linux/devlink.h linux/mdio-netlink.h
+EXTRA_DIST = linux/bitfield.h linux/devlink.h linux/mdio-netlink.h
