@@ -2,9 +2,9 @@
 #define __MVLS_H
 
 #include <errno.h>
-#include <sys/queue.h>
 
 #include "devlink.h"
+#include "queue.h"
 
 #define offsetof(type, member)  __builtin_offsetof (type, member)
 #define container_of(ptr, type, member) ({			     \
