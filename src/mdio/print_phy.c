@@ -298,53 +298,31 @@ static void print_pma_speed(uint16_t val)
 	putchar('\n');
 }
 
-static const char *get_pma_type(uint16_t val)
-{
-	switch (FIELD_GET(MDIO_PMA_CTRL2_TYPE, val)) {
-	case MDIO_PMA_CTRL2_10GBCX4:
-		return "10g-cx4";
-	case MDIO_PMA_CTRL2_10GBEW:
-		return "10g-ew";
-	case MDIO_PMA_CTRL2_10GBLW:
-		return "10g-lw";
-	case MDIO_PMA_CTRL2_10GBSW:
-		return "10g-sw";
-	case MDIO_PMA_CTRL2_10GBLX4:
-		return "10g-lx4";
-	case MDIO_PMA_CTRL2_10GBER:
-		return "10g-er";
-	case MDIO_PMA_CTRL2_10GBLR:
-		return "10g-lr";
-	case MDIO_PMA_CTRL2_10GBSR:
-		return "10g-sr";
-	case MDIO_PMA_CTRL2_10GBLRM:
-		return "10g-lrm";
-	case MDIO_PMA_CTRL2_10GBT:
-		return "10g-t";
-	case MDIO_PMA_CTRL2_10GBKX4:
-		return "10g-kx4";
-	case MDIO_PMA_CTRL2_10GBKR:
-		return "10g-kr";
-	case MDIO_PMA_CTRL2_1000BT:
-		return "1000-t";
-	case MDIO_PMA_CTRL2_1000BKX:
-		return "1000-kx";
-	case MDIO_PMA_CTRL2_100BTX:
-		return "100-tx";
-	case MDIO_PMA_CTRL2_10BT:
-		return "10-t";
-	/* TODO: the many, many 40G and 100G types... */
-	case MDIO_PMA_CTRL2_2_5GBT:
-		return "2.25g-t";
-	case MDIO_PMA_CTRL2_5GBT:
-		return "2.5g-t";
-	default:
-		return "unknown";
-	}
-}
-
 static void print_pma_ctrl2(uint16_t val)
 {
+	const char *type;
+	static const char *const pma_type[0x80] = {
+		[MDIO_PMA_CTRL2_10GBCX4]	= "10g-cx4",
+		[MDIO_PMA_CTRL2_10GBEW]		= "10g-ew",
+		[MDIO_PMA_CTRL2_10GBLW]		= "10g-lw",
+		[MDIO_PMA_CTRL2_10GBSW]		= "10g-sw",
+		[MDIO_PMA_CTRL2_10GBLX4]	= "10g-lx4",
+		[MDIO_PMA_CTRL2_10GBER]		= "10g-er",
+		[MDIO_PMA_CTRL2_10GBLR]		= "10g-lr",
+		[MDIO_PMA_CTRL2_10GBSR]		= "10g-sr",
+		[MDIO_PMA_CTRL2_10GBLRM]	= "10g-lrm",
+		[MDIO_PMA_CTRL2_10GBT]		= "10g-t",
+		[MDIO_PMA_CTRL2_10GBKX4]	= "10g-kx4",
+		[MDIO_PMA_CTRL2_10GBKR]		= "10g-kr",
+		[MDIO_PMA_CTRL2_1000BT]		= "1000-t",
+		[MDIO_PMA_CTRL2_1000BKX]	= "1000-kx",
+		[MDIO_PMA_CTRL2_100BTX]		= "100-tx",
+		[MDIO_PMA_CTRL2_10BT]		= "10-t",
+		/* TODO: the many, many 40G and 100G types... */
+		[MDIO_PMA_CTRL2_2_5GBT]		= "2.25g-t",
+		[MDIO_PMA_CTRL2_5GBT]		= "2.5g-t",
+	};
+
 	printf("CTRL2(0x07): %#.4x\n", val);
 
 	fputs("  flags: ", stdout);
@@ -354,7 +332,8 @@ static void print_pma_ctrl2(uint16_t val)
 	print_bool("peas", val & BIT(8));
 	putchar('\n');
 
-	printf("  type:  %s\n", get_pma_type(val));
+	type = pma_type[FIELD_GET(MDIO_PMA_CTRL2_TYPE, val)];
+	printf("  type:  %s\n", type ?: "unknown");
 }
 
 static void print_mmd_stat2_flags(uint16_t val)
@@ -543,31 +522,22 @@ static void print_pcs_speed(uint16_t val)
 	putchar('\n');
 }
 
-static const char *get_pcs_type(uint16_t val)
-{
-	switch (FIELD_GET(MDIO_PCS_CTRL2_TYPE, val)) {
-	case 0x0005:
-		return "100g-r";
-	case 0x0004:
-		return "40g-r";
-	case MDIO_PCS_CTRL2_10GBT:
-		return "10g-t";
-	case MDIO_PCS_CTRL2_10GBW:
-		return "10g-w";
-	case MDIO_PCS_CTRL2_10GBX:
-		return "10g-x";
-	case MDIO_PCS_CTRL2_10GBR:
-		return "10g-r";
-	default:
-		return "unknown";
-	}
-}
-
 static void print_pcs_ctrl2(uint16_t val)
 {
+	const char *type;
+	static const char *const pcs_type[0x10] = {
+		[0x5]			= "100g-r",
+		[0x4]			= "40g-r",
+		[MDIO_PCS_CTRL2_10GBT]	= "10g-t",
+		[MDIO_PCS_CTRL2_10GBW]	= "10g-w",
+		[MDIO_PCS_CTRL2_10GBX]	= "10g-x",
+		[MDIO_PCS_CTRL2_10GBR]	= "10g-r",
+	};
+
 	printf("CTRL2(0x07): %#.4x\n", val);
 
-	printf("  type: %s\n", get_pcs_type(val));
+	type = pcs_type[FIELD_GET(MDIO_PCS_CTRL2_TYPE, val)];
+	printf("  type: %s\n", type ?: "unknown");
 }
 
 static void print_pcs_stat2(uint16_t val)
