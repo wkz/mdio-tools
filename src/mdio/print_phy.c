@@ -302,25 +302,25 @@ static void print_pma_ctrl2(uint16_t val)
 {
 	const char *type;
 	static const char *const pma_type[0x80] = {
-		[MDIO_PMA_CTRL2_10GBCX4]	= "10g-cx4",
-		[MDIO_PMA_CTRL2_10GBEW]		= "10g-ew",
-		[MDIO_PMA_CTRL2_10GBLW]		= "10g-lw",
-		[MDIO_PMA_CTRL2_10GBSW]		= "10g-sw",
-		[MDIO_PMA_CTRL2_10GBLX4]	= "10g-lx4",
-		[MDIO_PMA_CTRL2_10GBER]		= "10g-er",
-		[MDIO_PMA_CTRL2_10GBLR]		= "10g-lr",
-		[MDIO_PMA_CTRL2_10GBSR]		= "10g-sr",
-		[MDIO_PMA_CTRL2_10GBLRM]	= "10g-lrm",
-		[MDIO_PMA_CTRL2_10GBT]		= "10g-t",
-		[MDIO_PMA_CTRL2_10GBKX4]	= "10g-kx4",
-		[MDIO_PMA_CTRL2_10GBKR]		= "10g-kr",
-		[MDIO_PMA_CTRL2_1000BT]		= "1000-t",
-		[MDIO_PMA_CTRL2_1000BKX]	= "1000-kx",
-		[MDIO_PMA_CTRL2_100BTX]		= "100-tx",
-		[MDIO_PMA_CTRL2_10BT]		= "10-t",
-		/* TODO: the many, many 40G and 100G types... */
-		[MDIO_PMA_CTRL2_2_5GBT]		= "2.25g-t",
 		[MDIO_PMA_CTRL2_5GBT]		= "2.5g-t",
+		[MDIO_PMA_CTRL2_2_5GBT]		= "2.25g-t",
+		/* TODO: the many, many 40G and 100G types... */
+		[MDIO_PMA_CTRL2_10BT]		= "10-t",
+		[MDIO_PMA_CTRL2_100BTX]		= "100-tx",
+		[MDIO_PMA_CTRL2_1000BKX]	= "1000-kx",
+		[MDIO_PMA_CTRL2_1000BT]		= "1000-t",
+		[MDIO_PMA_CTRL2_10GBKR]		= "10g-kr",
+		[MDIO_PMA_CTRL2_10GBKX4]	= "10g-kx4",
+		[MDIO_PMA_CTRL2_10GBT]		= "10g-t",
+		[MDIO_PMA_CTRL2_10GBLRM]	= "10g-lrm",
+		[MDIO_PMA_CTRL2_10GBSR]		= "10g-sr",
+		[MDIO_PMA_CTRL2_10GBLR]		= "10g-lr",
+		[MDIO_PMA_CTRL2_10GBER]		= "10g-er",
+		[MDIO_PMA_CTRL2_10GBLX4]	= "10g-lx4",
+		[MDIO_PMA_CTRL2_10GBSW]		= "10g-sw",
+		[MDIO_PMA_CTRL2_10GBLW]		= "10g-lw",
+		[MDIO_PMA_CTRL2_10GBEW]		= "10g-ew",
+		[MDIO_PMA_CTRL2_10GBCX4]	= "10g-cx4",
 	};
 
 	printf("CTRL2(0x07): %#.4x\n", val);
