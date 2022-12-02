@@ -32,18 +32,24 @@ static const char *get_speed(uint16_t val)
 	}
 
 	switch (val & MDIO_CTRL1_SPEEDSEL) {
+	case (MDIO_CTRL1_SPEEDSELEXT | 0x24):
+		return "400g";
+	case (MDIO_CTRL1_SPEEDSELEXT | 0x20):
+		return "200g";
 	case (MDIO_CTRL1_SPEEDSELEXT | 0x0c):
 		return "100g";
 	case (MDIO_CTRL1_SPEEDSELEXT | 0x08):
 		return "40g";
+	case (MDIO_CTRL1_SPEEDSELEXT | 0x10):
+		return "25g";
 	case MDIO_CTRL1_SPEED10G:
 		return "10g";
-	case MDIO_CTRL1_SPEED10P2B:
-		return "10-ts/2-tl";
 	case MDIO_CTRL1_SPEED2_5G:
 		return "2.5g";
 	case MDIO_CTRL1_SPEED5G:
 		return "5g";
+	case MDIO_CTRL1_SPEED10P2B:
+		return "10-ts/2-tl";
 	default:
 		return "unknown";
 	}
@@ -185,6 +191,12 @@ void print_mmd_devs(uint16_t devs_hi, uint16_t devs_lo)
 	print_bool("c22-ext", devs & MDIO_DEVS_C22EXT);
 	putchar(' ');
 
+	print_bool("power-unit", devs & MDIO_DEVS_PRESENT(13));
+	putchar(' ');
+
+	print_bool("ofdm", devs &  MDIO_DEVS_PRESENT(12));
+	putchar(' ');
+
 	print_bool("pma4", devs & MDIO_DEVS_PRESENT(11));
 	putchar(' ');
 
@@ -270,6 +282,24 @@ static void print_pma_speed(uint16_t val)
 	printf("SPEED(0x04): %#.4x\n", val);
 
 	fputs("  capabilities: ", stdout);
+	print_bool("400g", val & BIT(15));
+	putchar(' ');
+
+	print_bool("5g", val & BIT(14));
+	putchar(' ');
+
+	print_bool("2.5g", val & BIT(13));
+	putchar(' ');
+
+	print_bool("200g", val & BIT(12));
+	putchar(' ');
+
+	print_bool("25g", val & BIT(11));
+	putchar(' ');
+
+	print_bool("10g-xr", val & BIT(10));
+	putchar(' ');
+
 	print_bool("100g", val & BIT(9));
 	putchar(' ');
 
@@ -283,7 +313,8 @@ static void print_pma_speed(uint16_t val)
 	putchar(' ');
 
 	print_bool("100", val & MDIO_PMA_SPEED_100);
-	putchar(' ');
+	fputs("\n"
+	      "                ", stdout);
 
 	print_bool("1000", val & MDIO_PMA_SPEED_1000);
 	putchar(' ');
@@ -302,9 +333,55 @@ static void print_pma_ctrl2(uint16_t val)
 {
 	const char *type;
 	static const char *const pma_type[0x80] = {
-		[MDIO_PMA_CTRL2_5GBT]		= "2.5g-t",
-		[MDIO_PMA_CTRL2_2_5GBT]		= "2.25g-t",
-		/* TODO: the many, many 40G and 100G types... */
+		[0x5c]				= "400g-lr8",
+		[0x5b]				= "400g-fr8",
+		[0x5a]				= "400g-dr4",
+		[0x59]				= "400g-sr16",
+		[0x55]				= "200g-lr4",
+		[0x54]				= "200g-fr4",
+		[0x53]				= "200g-dr4",
+		[0x3d]				= "-t1",
+		[0x3a]				= "25g-sr",
+		[0x39]				= "25g-kr",
+		[0x38]				= "25g-cr",
+		[0x37]				= "25g-t",
+		[0x36]				= "25g-er",
+		[0x35]				= "25g-lr",
+		[0x34]				= "-h",
+		[0x33]				= "10g-xr-u",
+		[0x32]				= "10g-xr-d",
+		[MDIO_PMA_CTRL2_5GBT]		= "5g-t",
+		[MDIO_PMA_CTRL2_2_5GBT]		= "2.5g-t",
+		[0x2f]				= "100g-sr4",
+		[0x2e]				= "100g-cr4",
+		[0x2d]				= "100g-kr4",
+		[0x2c]				= "100g-kp4",
+		[0x2b]				= "100g-er4",
+		[0x2a]				= "100g-lr4",
+		[0x29]				= "100g-sr10",
+		[0x28]				= "100g-cr10",
+		[0x26]				= "40g-t",
+		[0x25]				= "40g-er4",
+		[0x24]				= "40g-fr",
+		[0x23]				= "40g-lr4",
+		[0x22]				= "40g-sr4",
+		[0x21]				= "40g-cr4",
+		[0x20]				= "40g-kr4",
+		[0x1f]				= "10/1g-prx-u4",
+		[0x1e]				= "10g-pr-u4",
+		[0x1d]				= "10/1g-prx-d4",
+		[0x1c]				= "10g-pr-d4",
+		[0x1a]				= "10g-pr-u3",
+		[0x19]				= "10g-pr-u1",
+		[0x18]				= "10/1g-prx-u3",
+		[0x17]				= "10/1g-prx-u2",
+		[0x16]				= "10/1g-prx-u1",
+		[0x15]				= "10g-pr-d3",
+		[0x14]				= "10g-pr-d2",
+		[0x13]				= "10g-pr-d1",
+		[0x12]				= "10/1g-prx-d3",
+		[0x11]				= "10/1g-prx-d2",
+		[0x10]				= "10/1g-prx-d1",
 		[MDIO_PMA_CTRL2_10BT]		= "10-t",
 		[MDIO_PMA_CTRL2_100BTX]		= "100-tx",
 		[MDIO_PMA_CTRL2_1000BKX]	= "1000-kx",
@@ -416,11 +493,11 @@ static void print_pma_extable(uint16_t val)
 	putchar(' ');
 
 	print_bool("1000-t", val & MDIO_PMA_EXTABLE_1000BT);
-	fputs("\n"
-	      "                ", stdout);
+	putchar(' ');
 
 	print_bool("1000-kx", val & MDIO_PMA_EXTABLE_1000BKX);
-	putchar(' ');
+	fputs("\n"
+	      "                ", stdout);
 
 	print_bool("100-tx", val & MDIO_PMA_EXTABLE_100BTX);
 	putchar(' ');
@@ -428,7 +505,26 @@ static void print_pma_extable(uint16_t val)
 	print_bool("10-t", val & MDIO_PMA_EXTABLE_10BT);
 	putchar(' ');
 
-	print_bool("2.5g/5g-t", val & MDIO_PMA_EXTABLE_NBT);
+	print_bool("p2mp", val & BIT(9));
+	putchar(' ');
+
+	print_bool("40g/100g", val & BIT(10));
+	putchar(' ');
+
+	print_bool("1000/100-t1", val & BIT(11));
+	putchar(' ');
+
+	print_bool("25g", val & BIT(12));
+	putchar(' ');
+
+	print_bool("200g/400g", val & BIT(13));
+	fputs("\n"
+	      "                ", stdout);
+
+	print_bool("2.5g/5g", val & MDIO_PMA_EXTABLE_NBT);
+	putchar(' ');
+
+	print_bool("1000-h", val & BIT(15));
 	putchar('\n');
 }
 
@@ -509,6 +605,21 @@ static void print_pcs_speed(uint16_t val)
 	printf("SPEED(0x04): %#.4x\n", val);
 
 	fputs("  capabilities: ", stdout);
+	print_bool("400g", val & BIT(9));
+	putchar(' ');
+
+	print_bool("200g", val & BIT(8));
+	putchar(' ');
+
+	print_bool("5g", val & BIT(7));
+	putchar(' ');
+
+	print_bool("2.5g", val & BIT(5));
+	putchar(' ');
+
+	print_bool("25g", val & BIT(4));
+	putchar(' ');
+
 	print_bool("100g", val & BIT(3));
 	putchar(' ');
 
@@ -526,6 +637,13 @@ static void print_pcs_ctrl2(uint16_t val)
 {
 	const char *type;
 	static const char *const pcs_type[0x10] = {
+		[0xd]			= "400g-r",
+		[0xc]			= "200g-r",
+		[0xb]			= "5g-t",
+		[0xa]			= "2.5g-t",
+		[0x9]			= "25g-t",
+		[0x7]			= "25g-r",
+		[0x6]			= "40g-t",
 		[0x5]			= "100g-r",
 		[0x4]			= "40g-r",
 		[MDIO_PCS_CTRL2_10GBT]	= "10g-t",
@@ -545,6 +663,21 @@ static void print_pcs_stat2(uint16_t val)
 	printf("STAT2(0x08): %#.4x\n", val);
 
 	fputs("  capabilities: ", stdout);
+	print_bool("5g-t", val & BIT(13));
+	putchar(' ');
+
+	print_bool("2.5g-t", val & BIT(12));
+	putchar(' ');
+
+	print_bool("25g-t", val & BIT(9));
+	putchar(' ');
+
+	print_bool("25g-r", val & BIT(7));
+	putchar(' ');
+
+	print_bool("40g-t", val & BIT(6));
+	putchar(' ');
+
 	print_bool("100g-r", val & BIT(5));
 	putchar(' ');
 
@@ -555,7 +688,8 @@ static void print_pcs_stat2(uint16_t val)
 	putchar(' ');
 
 	print_bool("10g-w", val & MDIO_PCS_STAT2_10GBW);
-	putchar(' ');
+	fputs("\n"
+	      "                ", stdout);
 
 	print_bool("10g-x", val & MDIO_PCS_STAT2_10GBX);
 	putchar(' ');
