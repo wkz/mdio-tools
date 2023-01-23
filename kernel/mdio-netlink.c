@@ -9,17 +9,6 @@
 #include <net/genetlink.h>
 #include <net/netlink.h>
 
-static void c45_compat_convert(int *kdev, int *kreg, int udev, int ureg)
-{
-	if (!mdio_phy_id_is_c45(udev)) {
-		*kdev = udev;
-		*kreg = ureg;
-	} else {
-		*kdev = mdio_phy_id_prtad(udev);
-		*kreg = MII_ADDR_C45 | (mdio_phy_id_devad(udev) << 16) | ureg;
-	}
-}
-
 struct mdio_nl_xfer {
 	struct genl_info *info;
 	struct sk_buff *msg;
@@ -93,7 +82,6 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 	unsigned long timeout;
 	u16 regs[8] = { 0 };
 	unsigned int pc;
-	int dev, reg;
 	int ret = 0;
 
 	timeout = jiffies + msecs_to_jiffies(xfer->timeout_ms);
@@ -110,11 +98,15 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 
 		switch ((enum mdio_nl_op)insn->op) {
 		case MDIO_NL_OP_READ:
-			c45_compat_convert(&dev, &reg,
-					   __arg_ri(insn->arg0, regs),
-					   __arg_ri(insn->arg1, regs));
-
-			ret = __mdiobus_read(xfer->mdio, dev, reg);
+			if (mdio_phy_id_is_c45(__arg_ri(insn->arg0, regs)))
+				ret = __mdiobus_c45_read(xfer->mdio,
+							 mdio_phy_id_prtad(__arg_ri(insn->arg0, regs)),
+							 mdio_phy_id_devad(__arg_ri(insn->arg0, regs)),
+							 __arg_ri(insn->arg1, regs));
+			else
+				ret = __mdiobus_read(xfer->mdio,
+				                     __arg_ri(insn->arg0, regs),
+				                     __arg_ri(insn->arg1, regs));
 			if (ret < 0)
 				goto exit;
 			*__arg_r(insn->arg2, regs) = ret;
@@ -122,12 +114,17 @@ static int mdio_nl_eval(struct mdio_nl_xfer *xfer)
 			break;
 
 		case MDIO_NL_OP_WRITE:
-			c45_compat_convert(&dev, &reg,
-					   __arg_ri(insn->arg0, regs),
-					   __arg_ri(insn->arg1, regs));
-
-			ret = __mdiobus_write(xfer->mdio, dev, reg,
-					      __arg_ri(insn->arg2, regs));
+			if (mdio_phy_id_is_c45(__arg_ri(insn->arg0, regs)))
+				ret = __mdiobus_c45_write(xfer->mdio,
+							 mdio_phy_id_prtad(__arg_ri(insn->arg0, regs)),
+							 mdio_phy_id_devad(__arg_ri(insn->arg0, regs)),
+							 __arg_ri(insn->arg1, regs),
+							 __arg_ri(insn->arg2, regs));
+			else
+				ret = __mdiobus_write(xfer->mdio,
+				                      __arg_ri(insn->arg0, regs),
+				                      __arg_ri(insn->arg1, regs),
+						      __arg_ri(insn->arg2, regs));
 			if (ret < 0)
 				goto exit;
 			ret = 0;
