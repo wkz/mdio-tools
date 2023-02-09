@@ -8,6 +8,7 @@
 #include <linux/phy.h>
 #include <net/genetlink.h>
 #include <net/netlink.h>
+#include "compat.h"
 
 struct mdio_nl_xfer {
 	struct genl_info *info;
