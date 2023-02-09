@@ -8,6 +8,7 @@
 #include <linux/phy.h>
 #include <net/genetlink.h>
 #include <net/netlink.h>
+#include "compat.h"
 
 static void c45_compat_convert(int *kdev, int *kreg, int udev, int ureg)
 {
