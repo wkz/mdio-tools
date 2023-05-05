@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <linux/mdio-netlink.h>
 
 #define BIT(_n) (1 << (_n))
