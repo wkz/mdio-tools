@@ -201,6 +201,16 @@ const struct chip chips[] = {
 		.n_ports = 7,
 	},
 	{
+		.id = "Marvell 88E6320",
+		.family = &opal_family,
+		.n_ports = 7,
+	},
+	{
+		.id = "Marvell 88E6321",
+		.family = &opal_family,
+		.n_ports = 7,
+	},
+	{
 		.id = "Marvell 88E6190",
 		.family = &peridot_family,
 		.n_ports = 11,
