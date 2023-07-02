@@ -90,7 +90,7 @@ Operations:
 Build
 -----
 
-At the moment, the kernel module (which requires at least kernel version 5.6)
+At the moment, the kernel module (which requires at least kernel version 5.2)
 has to be built separately. Set `KDIR` if building against a kernel in a
 non-standard location.
 
