@@ -3,6 +3,19 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.3.0] - 2023-07-24
+---------------------
+
+Primarily widen the gamut of supported kernel versions, now supporting
+all kernels from 5.2 and onwards.
+
+### Added
+- mvls: Support for 88E6320/88E6321
+
+### Changed
+- mdio-netlink: Adapt to the upstream C22/C45 refactor.
+
+
 [v1.2.0] - 2022-09-15
 ---------------------
 
