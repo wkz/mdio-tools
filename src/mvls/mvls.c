@@ -421,8 +421,8 @@ static int env_init_dev_cb(const struct nlmsghdr *nlh, void *_env)
 	    !tb[DEVLINK_ATTR_INFO_DRIVER_NAME])
 		return MNL_CB_ERROR;
 
-	if (strcmp("mv88e6xxx",
-		   mnl_attr_get_str(tb[DEVLINK_ATTR_INFO_DRIVER_NAME])))
+	if (strncmp("mv88e6",
+		    mnl_attr_get_str(tb[DEVLINK_ATTR_INFO_DRIVER_NAME]), 6))
 		return MNL_CB_OK;
 
 	mnl_attr_for_each(ver, nlh, sizeof(struct genlmsghdr)) {
