@@ -16,174 +16,6 @@
 
 #include "mdio.h"
 
-static int mdio_parse_bus_cb(const char *bus, void *_id)
-{
-	char **id = _id;
-
-	*id = strdup(bus);
-	return 1;
-}
-
-int mdio_parse_bus(const char *str, char **bus)
-{
-	*bus = NULL;
-	mdio_for_each(str, mdio_parse_bus_cb, bus);
-
-	if (*bus)
-		return 0;
-
-	fprintf(stderr, "ERROR: \"%s\" does not match any known MDIO bus", str);
-	return ENODEV;
-}
-
-int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45)
-{
-	unsigned long p, d = 0;
-	char *end;
-
-	p = strtoul(str, &end, 0);
-	if (!end[0]) {
-		allow_c45 = false;
-		goto c22;
-	}
-
-	if (end[0] != ':')
-		/* not clause 45 either */
-		goto err_invalid;
-
-	if (!allow_c45) {
-		fprintf(stderr, "ERROR: Clause-45 addressing not allowed\n");
-		return EINVAL;
-	}
-
-	d = strtoul(end + 1, &end, 0);
-	if (end[0])
-		goto err_invalid;
-
-	if (allow_c45 && (d > 31)) {
-		fprintf(stderr, "ERROR: Device %lu is out of range [0-31]\n", d);
-		return ERANGE;
-	}
-
-c22:
-	if (p > 31) {
-		fprintf(stderr, "ERROR: %s %lu is out of range [0-31]\n",
-			allow_c45 ? "Port" : "Device", d);
-		return ERANGE;
-	}
-
-	*dev = allow_c45 ? mdio_phy_id_c45(p, d) : p;
-	return 0;
-
-err_invalid:
-	fprintf(stderr, "ERROR: \"%s\" is not a valid device\n", str);
-	return EINVAL;
-}
-
-int mdio_parse_reg(const char *str, uint16_t *reg, bool is_c45)
-{
-	unsigned long r;
-	char *end;
-
-	r = strtoul(str, &end, 0);
-	if (end[0]) {
-		fprintf(stderr, "ERROR: \"%s\" is not a valid register", str);
-		return EINVAL;
-	}
-
-	if (r > (is_c45 ? UINT16_MAX : 31)) {
-		fprintf(stderr, "ERROR: Register %lu is out of range [0-%u]",
-			r, is_c45 ? UINT16_MAX : 31);
-		return ERANGE;
-	}
-
-	*reg = r;
-	return 0;
-}
-
-int mdio_parse_reg_range(const char *str, uint16_t *regs, uint16_t *rege,
-			 bool is_c45)
-{
-	unsigned long s, e = 0;
-	char *delim, *end;
-
-	s = strtoul(str, &delim, 0);
-	switch (*delim) {
-	case '\0':
-		e = is_c45 ? 31 : s + 127;
-		break;
-	case '+':
-		e += s;
-		/* fall-through */
-	case '-':
-		e += strtoul(delim + 1, &end, 0);
-
-		if (!(*end))
-			break;
-
-		/* fall-through */
-	default:
-		fprintf(stderr, "ERROR: \"%s\" is not a valid register range",
-			str);
-		return EINVAL;
-	}
-
-
-	if (e > (is_c45 ? UINT16_MAX : 31)) {
-		fprintf(stderr, "ERROR: Register %lu is out of range [0-%u]",
-			e, is_c45 ? UINT16_MAX : 31);
-		return ERANGE;
-	}
-
-	*regs = s;
-	*rege = e;
-	return 0;
-}
-
-int mdio_parse_val(const char *str, uint16_t *val, uint16_t *mask)
-{
-	unsigned long v, m = 0;
-	char *end;
-
-	v = strtoul(str, &end, 0);
-	if (!end[0])
-		goto done;
-
-	if (end[0] != '/')
-		goto err_invalid;
-
-	if (!mask) {
-		fprintf(stderr, "ERROR: Masking of value not allowed");
-		return EINVAL;
-	}
-
-	m = strtoul(end + 1, &end, 0);
-	if (end[0])
-		goto err_invalid;
-
-done:
-	if (v > UINT16_MAX) {
-		fprintf(stderr, "ERROR: Value %#lx is out of range [0-%u]",
-			v, UINT16_MAX);
-		return ERANGE;
-	}
-
-	if (m > UINT16_MAX) {
-		fprintf(stderr, "ERROR: Mask %#lx is out of range [0-%u]",
-			m, UINT16_MAX);
-		return ERANGE;
-	}
-
-	*val = v;
-	if (mask)
-		*mask = m;
-	return 0;
-
-err_invalid:
-	fprintf(stderr, "ERROR: \"%s\" is not a valid register value", str);
-	return EINVAL;
-}
-
 static char buf[0x1000] __attribute__ ((aligned (NLMSG_ALIGNTO)));
 static const size_t len = 0x1000;
 static uint16_t mdio_family;
@@ -280,85 +112,74 @@ struct nlmsghdr *msg_init(int cmd, int flags)
 	return nlh;
 }
 
+static int mdio_parse_bus_cb(const char *bus, void *_id)
+{
+	char **id = _id;
+
+	*id = strdup(bus);
+	return 1;
+}
+
+int mdio_parse_bus(const char *str, char **bus)
+{
+	*bus = NULL;
+	mdio_for_each(str, mdio_parse_bus_cb, bus);
+
+	if (*bus)
+		return 0;
+
+	fprintf(stderr, "ERROR: \"%s\" does not match any known MDIO bus", str);
+	return ENODEV;
+}
+
+int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45)
+{
+	unsigned long p, d = 0;
+	char *end;
+
+	p = strtoul(str, &end, 0);
+	if (!end[0]) {
+		allow_c45 = false;
+		goto c22;
+	}
+
+	if (end[0] != ':')
+		/* not clause 45 either */
+		goto err_invalid;
+
+	if (!allow_c45) {
+		fprintf(stderr, "ERROR: Clause-45 addressing not allowed\n");
+		return EINVAL;
+	}
+
+	d = strtoul(end + 1, &end, 0);
+	if (end[0])
+		goto err_invalid;
+
+	if (allow_c45 && (d > 31)) {
+		fprintf(stderr, "ERROR: Device %lu is out of range [0-31]\n", d);
+		return ERANGE;
+	}
+
+c22:
+	if (p > 31) {
+		fprintf(stderr, "ERROR: %s %lu is out of range [0-31]\n",
+			allow_c45 ? "Port" : "Device", d);
+		return ERANGE;
+	}
+
+	*dev = allow_c45 ? mdio_phy_id_c45(p, d) : p;
+	return 0;
+
+err_invalid:
+	fprintf(stderr, "ERROR: \"%s\" is not a valid device\n", str);
+	return EINVAL;
+}
+
 void mdio_prog_push(struct mdio_prog *prog, struct mdio_nl_insn insn)
 {
 	prog->insns = realloc(prog->insns, (++prog->len) * sizeof(insn));
 	memcpy(&prog->insns[prog->len - 1], &insn, sizeof(insn));
-}
-
-int mdio_raw_read_cb(uint32_t *data, int len, int err, void *_null)
-{
-	if (len != 1)
-		return 1;
-
-	printf("0x%4.4x\n", *data);
-	return err;
-}
-
-int mdio_raw_write_cb(uint32_t *data, int len, int err, void *_null)
-{
-	if (len != 0)
-		return 1;
-
-	return err;
-}
-
-int mdio_raw_exec(struct mdio_ops *ops, int argc, char **argv)
-{
-	struct mdio_prog prog = MDIO_PROG_EMPTY;
-	mdio_xfer_cb_t cb = mdio_raw_read_cb;
-	uint16_t dev, reg, val, mask;
-	int err;
-
-	switch (argc) {
-	case 3:
-		cb = mdio_raw_write_cb;
-		if (mdio_parse_val(argv[2], &val, &mask))
-			return 1;
-
-		/* fall-through */
-	case 2:
-		if (mdio_parse_dev(argv[0], &dev, true))
-			return 1;
-
-		if (mdio_parse_reg(argv[1], &reg, dev & MDIO_PHY_ID_C45))
-			return 1;
-
-		break;
-
-	default:
-		ops->usage(stderr);
-		return 1;
-	}
-
-	if ((cb == mdio_raw_write_cb) && mask) {
-		err = ops->push_read(ops, &prog, dev, reg);
-		if (err)
-			return err;
-		mdio_prog_push(&prog, INSN(AND, REG(0), IMM(mask), REG(0)));
-		mdio_prog_push(&prog, INSN(OR,  REG(0), IMM(val),  REG(0)));
-		err = ops->push_write(ops, &prog, dev, reg, REG(0));
-		if (err)
-			return err;
-	} else if (cb == mdio_raw_write_cb) {
-		err = ops->push_write(ops, &prog, dev, reg, IMM(val));
-		if (err)
-			return err;
-	} else {
-		err = ops->push_read(ops, &prog, dev, reg);
-		if (err)
-			return err;
-		mdio_prog_push(&prog, INSN(EMIT,  REG(0),   0,         0));
-	}
-
-	err = mdio_xfer(ops->bus, &prog, cb, NULL);
-	free(prog.insns);
-	if (err) {
-		fprintf(stderr, "ERROR: Raw operation failed (%d)\n", err);
-		return 1;
-	}
-
-	return 0;
 }
 
 int mdio_device_dflt_parse_reg(struct mdio_device *dev,
@@ -469,10 +290,27 @@ int mdio_device_parse_val(struct mdio_device *dev, int *argcp, char ***argvp,
 	return mdio_device_dflt_parse_val(dev, argcp, argvp, val, mask);
 }
 
+int mdio_common_raw_read_cb(uint32_t *data, int len, int err, void *_null)
+{
+	if (len != 1)
+		return 1;
+
+	printf("0x%4.4x\n", *data);
+	return err;
+}
+
+int mdio_common_raw_write_cb(uint32_t *data, int len, int err, void *_null)
+{
+	if (len != 0)
+		return 1;
+
+	return err;
+}
+
 int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 {
 	struct mdio_prog prog = MDIO_PROG_EMPTY;
-	mdio_xfer_cb_t cb = mdio_raw_read_cb;
+	mdio_xfer_cb_t cb = mdio_common_raw_read_cb;
 	uint32_t reg, val, mask;
 	int err;
 
@@ -481,7 +319,7 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 		return err;
 
 	if (argv_peek(argc, argv)) {
-		cb = mdio_raw_write_cb;
+		cb = mdio_common_raw_write_cb;
 
 		err = mdio_device_parse_val(dev, &argc, &argv, &val, &mask);
 		if (err)
@@ -493,7 +331,7 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 		return EINVAL;
 	}
 
-	if ((cb == mdio_raw_write_cb) && mask) {
+	if ((cb == mdio_common_raw_write_cb) && mask) {
 		err = dev->driver->read(dev, &prog, reg);
 		if (err)
 			return err;
@@ -502,7 +340,7 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 		err = dev->driver->write(dev, &prog, reg, REG(0));
 		if (err)
 			return err;
-	} else if (cb == mdio_raw_write_cb) {
+	} else if (cb == mdio_common_raw_write_cb) {
 		err = dev->driver->write(dev, &prog, reg, IMM(val));
 		if (err)
 			return err;

@@ -62,9 +62,6 @@ struct cmd {
 extern struct cmd __start_cmds;
 extern struct cmd __stop_cmds;
 
-int mdio_raw_read_cb (uint32_t *data, int len, int err, void *_null);
-int mdio_raw_write_cb(uint32_t *data, int len, int err, void *_null);
-
 void print_phy_bmcr   (uint16_t val);
 void print_phy_bmsr   (uint16_t val);
 void print_phy_id     (uint16_t id_hi, uint16_t id_lo);
@@ -87,8 +84,6 @@ extern const struct mmd_print_device an_print_device;
 
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
-int mdio_parse_reg(const char *str, uint16_t *reg, bool is_c45);
-int mdio_parse_val(const char *str, uint16_t *val, uint16_t *mask);
 
 struct mdio_prog {
 	struct mdio_nl_insn *insns;
