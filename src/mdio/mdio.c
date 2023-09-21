@@ -186,33 +186,67 @@ int mdio_device_dflt_parse_reg(struct mdio_device *dev,
 			       int *argcp, char ***argvp,
 			       uint32_t *regs, uint32_t *rege)
 {
-	unsigned long long r;
-	char *str, *end;
+	unsigned long long rs, re, base = 0;
+	char *arg, *str, *end;
 
-	if (rege) {
-		fprintf(stderr, "ERROR: Implement ranges\n");
-		return ENOSYS;
-	}
+	errno = 0;
 
-	str = argv_pop(argcp, argvp);
-	if (!str) {
+	arg = argv_pop(argcp, argvp);
+	if (!arg) {
 		fprintf(stderr, "ERROR: Expected register\n");
 		return EINVAL;
 	}
 
-	r = strtoull(str, &end, 0);
-	if (end[0]) {
-		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n", str);
+	str = arg;
+	rs = strtoull(str, &end, 0);
+	if (errno)
+		goto inval;
+
+	switch (*end) {
+	case '\0':
+		re = rs;
+		break;
+	case '+':
+		base = rs;
+		/* fallthrough */
+	case '-':
+		if (!rege) {
+			fprintf(stderr, "ERROR: Unexpected register range\n");
+			return EINVAL;
+		}
+
+		str = end + 1;
+		re = strtoull(str, &end, 0);
+		if (errno) {
+			fprintf(stderr, "ERROR: \"%s\" is not a valid register range\n", arg);
+			return EINVAL;
+		}
+
+		re += base;
+		break;
+	default:
+	inval:
+		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n", arg);
 		return EINVAL;
 	}
 
-	if (r > dev->mem.max) {
+	if (rs > dev->mem.max) {
 		fprintf(stderr, "ERROR: Register %llu is out of range "
-			"[0-%"PRIu32"]\n", r, dev->mem.max);
+			"[0-%"PRIu32"]\n", rs, dev->mem.max);
 		return ERANGE;
 	}
 
-	*regs = r;
+	if (re > dev->mem.max) {
+		fprintf(stderr, "ERROR: Register %llu is out of range "
+			"[0-%"PRIu32"]\n", re, dev->mem.max);
+		return ERANGE;
+	}
+
+	*regs = rs;
+
+	if (rege)
+		*rege = re;
+
 	return 0;
 }
 
@@ -459,6 +493,69 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 	return 0;
 }
 
+struct reg_range {
+	uint32_t start;
+	uint32_t end;
+};
+
+int mdio_common_dump_cb(uint32_t *data, int len, int err, void *_range)
+{
+	struct reg_range *range = _range;
+	uint32_t reg;
+
+	if (len != (int)(range->end - range->start + 1))
+		return 1;
+
+	for (reg = range->start; reg <= range->end; reg++)
+		printf("0x%04x: 0x%04x\n", reg, *data++);
+
+	return err;
+}
+
+int mdio_common_dump_exec_one(struct mdio_device *dev, int *argc, char ***argv)
+{
+	struct mdio_prog prog = MDIO_PROG_EMPTY;
+	struct reg_range range;
+	uint32_t reg;
+	int err;
+
+	err = mdio_device_parse_reg(dev, argc, argv, &range.start, &range.end);
+	if (err)
+		return err;
+
+	/* Can't emit a loop, since there's no way to pass the (mdio)
+	 * register in a (mdio-netlink) register - so we unroll it. */
+	for (reg = range.start; reg <= range.end; reg++) {
+		err = dev->driver->read(dev, &prog, reg);
+		if (err)
+			return err;
+
+		mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+	}
+
+	err = mdio_xfer_timeout(dev->bus, &prog, mdio_common_dump_cb, &range, 10000);
+	free(prog.insns);
+	if (err) {
+		fprintf(stderr, "ERROR: Dump operation failed (%d)\n", err);
+		return 1;
+	}
+
+	return 0;
+}
+
+int mdio_common_dump_exec(struct mdio_device *dev, int argc, char **argv)
+{
+	int err;
+
+	while (argv_peek(argc, argv)) {
+		err = mdio_common_dump_exec_one(dev, &argc, &argv);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
 int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 {
 	if (!argc)
@@ -470,6 +567,9 @@ int mdio_common_exec(struct mdio_device *dev, int argc, char **argv)
 	} else if (!strcmp(argv[0], "bench")) {
 		argv_pop(&argc, &argv);
 		return mdio_common_bench_exec(dev, argc, argv);
+	} else if (!strcmp(argv[0], "dump")) {
+		argv_pop(&argc, &argv);
+		return mdio_common_dump_exec(dev, argc, argv);
 	}
 
 	return mdio_common_raw_exec(dev, argc, argv);
