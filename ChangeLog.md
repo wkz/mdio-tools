@@ -3,6 +3,20 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.3.1] - 2023-12-02
+---------------------
+
+Fixes mvls to work with kernels 6.2 and onwards.
+
+### Added
+- mdio: Multiple registers can now be dumped at once, via the generic
+  dump operation.
+
+### Fixed
+- mvls: Relax the driver matching to accept the strings used in
+  kernels 6.2 and newer.
+
+
 [v1.3.0] - 2023-07-24
 ---------------------
 
