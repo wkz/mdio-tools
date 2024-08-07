@@ -128,7 +128,7 @@ int mdio_parse_bus(const char *str, char **bus)
 	if (*bus)
 		return 0;
 
-	fprintf(stderr, "ERROR: \"%s\" does not match any known MDIO bus", str);
+	fprintf(stderr, "ERROR: \"%s\" does not match any known MDIO bus\n", str);
 	return ENODEV;
 }
 
@@ -284,7 +284,7 @@ int mdio_device_dflt_parse_val(struct mdio_device *dev,
 		goto err_invalid;
 
 	if (!mask) {
-		fprintf(stderr, "ERROR: Masking of value not allowed");
+		fprintf(stderr, "ERROR: Masking of value not allowed\n");
 		return EINVAL;
 	}
 
@@ -361,7 +361,7 @@ int mdio_common_raw_exec(struct mdio_device *dev, int argc, char **argv)
 	}
 
 	if (argv_peek(argc, argv)) {
-		fprintf(stderr, "ERROR: Unexpected argument");
+		fprintf(stderr, "ERROR: Unexpected argument\n");
 		return EINVAL;
 	}
 

@@ -73,7 +73,7 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 	str = argv_pop(argcp, argvp);
 	tok = str ? strtok(str, ":") : NULL;
 	if (!tok) {
-		fprintf(stderr, "ERROR: PAGE:REG");
+		fprintf(stderr, "ERROR: PAGE:REG\n");
 		return EINVAL;
 	} else if (!strcmp(tok, "copper") || !strcmp(tok, "cu")) {
 		page = MVA_PAGE_COPPER;
@@ -96,7 +96,7 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 
 	tok = strtok(NULL, ":");
 	if (!tok) {
-		fprintf(stderr, "ERROR: Expected REG");
+		fprintf(stderr, "ERROR: Expected REG\n");
 		return EINVAL;
 	}
 
