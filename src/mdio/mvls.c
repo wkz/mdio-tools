@@ -463,7 +463,7 @@ static int mvls_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 	str = argv_pop(argcp, argvp);
 	tok = str ? strtok(str, ":") : NULL;
 	if (!tok) {
-		fprintf(stderr, "ERROR: Expected PORT:REG");
+		fprintf(stderr, "ERROR: Expected PORT:REG\n");
 		return EINVAL;
 	}
 
@@ -488,7 +488,7 @@ static int mvls_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 
 	tok = strtok(NULL, ":");
 	if (!tok) {
-		fprintf(stderr, "ERROR: Expected REG");
+		fprintf(stderr, "ERROR: Expected REG\n");
 		return EINVAL;
 	}
 
