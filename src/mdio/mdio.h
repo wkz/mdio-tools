@@ -55,12 +55,13 @@ struct cmd {
 	int (*exec)(const char *bus, int argc, char **argv);
 };
 
+// Derived from https://stackoverflow.com/a/4152185
 #define DEFINE_CMD(_name, _exec) \
-  __attribute__(( section("cmds"), aligned(__alignof__(struct cmd)) )) \
+  __attribute__((externally_visible, section(".cmd_registry"), aligned(__alignof__(struct cmd)) )) \
   struct cmd _exec ## _cmd = { .name = _name, .exec = _exec }
 
-extern struct cmd __start_cmds;
-extern struct cmd __stop_cmds;
+extern struct cmd cmds_start;
+extern struct cmd cmds_end;
 
 void print_phy_bmcr   (uint16_t val);
 void print_phy_bmsr   (uint16_t val);

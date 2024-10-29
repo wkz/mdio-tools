@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 	if (!arg)
 		return bus_status(bus) ? 1 : 0;
 
-	for (cmd = &__start_cmds; cmd < &__stop_cmds; cmd++) {
+	for (cmd = &cmds_start; cmd < &cmds_end; cmd++) {
 		if (!strcmp(cmd->name, arg)) {
 			argv_pop(&argc, &argv);
 			return cmd->exec(bus, argc, argv) ? 1 : 0;
