@@ -57,7 +57,7 @@ struct cmd {
 
 // Derived from https://stackoverflow.com/a/4152185
 #define DEFINE_CMD(_name, _exec) \
-  __attribute__((externally_visible, section(".cmd_registry"), aligned(__alignof__(struct cmd)) )) \
+  __attribute__((used, section(".cmd_registry"), aligned(__alignof__(struct cmd)) )) \
   struct cmd _exec ## _cmd = { .name = _name, .exec = _exec }
 
 extern struct cmd cmds_start;
