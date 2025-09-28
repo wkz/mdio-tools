@@ -613,6 +613,9 @@ int mdio_xfer_timeout(const char *bus, struct mdio_prog *prog,
 	struct nlmsghdr *nlh;
 	int err;
 
+	if (prog->len * sizeof(*prog->insns) > len)
+		return -ENOMEM;
+
 	nlh = msg_init(MDIO_GENL_XFER, NLM_F_REQUEST | NLM_F_ACK);
 	if (!nlh)
 		return -ENOMEM;
