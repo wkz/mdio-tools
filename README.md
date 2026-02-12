@@ -41,14 +41,14 @@ Usage
     mdio BUS OBJ    -- Show status of OBJ
     mdio BUS OBJ OP -- Perform OP on OBJ
 
-Options:
+OPTIONS
   -h   This help text
   -v   Show verision and contact information
 
 Bus names may be abbreviated using glob(3) syntax, i.e. "fixed*"
 would typically match against "fixed-0".
 
-Objects:
+OBJECTS
   phy PHYAD
     Clause 22 (MDIO) PHY using address PHYAD.
 
@@ -56,6 +56,10 @@ Objects:
 
   mmd PRTAD[:DEVAD]
     Clause 45 (XMDIO) PHY using address PRTAD:DEVAD.
+
+  mmd-c22 PRTAD[:DEVAD]
+    Clause 45 (XMDIO) PHY addressed over Clause 22 using address
+    PRTAD:DEVAD.
 
     REG: u16
 
@@ -77,14 +81,52 @@ Objects:
 
     REG: u32 (Stride of 2, only even registers are valid)
 
-Operations:
+OPERATIONS                                                                                                                                                                          [3/1836]
   raw REG [DATA[/MASK]]
     Raw register access. Without DATA, REG is read. An unmasked DATA will
-    do a single write to REG. A masked DATA will perform a read/mask/write
+    do a single write to REG. DATA with MASK will run the atomic sequence
+    write(REG, (read(REG) & MASK) | DATA)
     sequence.
 
     DATA: u16
     MASK: u16
+
+  bench REG [DATA]
+    Benchmark read performance. If DATA is supplied, it is written to REG,
+    otherwise the current value in REG is read. REG is then read 1000
+    times. Any unexpected values are reported, along with the total time.
+
+    DATA: u16
+
+EXAMPLES
+  Show all available buses:
+     ~# mdio
+     30be0000.ethernet-1
+     fixed-0
+
+  List all Clause 22 addressable devices on a bus (using glob(3) pattern
+  to abbreviate bus name):
+    ~# mdio 3*
+    DEV      PHY-ID  LINK
+    0x01  0x01410dd0  up
+
+  Read register 2 from PHY 1:
+    ~# mdio 3* phy 1 raw 2
+    0x0141
+
+  Perform a reset on PHY 1:
+    ~# mdio 3* phy 1 raw 0 0x8000/0x7fff
+
+  Read register 0x1000 from MMD 4 on PHY 9:
+    ~# mdio 3* mmd 9:4 raw 0x1000
+    0x2040
+
+  Read status register from the copper page of an Alaska PHY:
+    ~# mdio 3* mva 1 raw copper:1
+    0x796d
+
+  Set the device number, of LinkStreet switch 4, to 10:
+    ~# mdio 3* mvls 4 raw g1:28 0xa/0xfff0
 ```
 
 Build
