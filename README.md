@@ -81,7 +81,7 @@ OBJECTS
 
     REG: u32 (Stride of 2, only even registers are valid)
 
-OPERATIONS                                                                                                                                                                          [3/1836]
+OPERATIONS
   raw REG [DATA[/MASK]]
     Raw register access. Without DATA, REG is read. An unmasked DATA will
     do a single write to REG. DATA with MASK will run the atomic sequence
