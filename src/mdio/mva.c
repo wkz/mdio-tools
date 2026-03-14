@@ -10,9 +10,12 @@
 #define MVA_PAGE_COPPER 0
 #define MVA_PAGE_FIBER  1
 
+#define MSCC_PAGE 0x1f
+
 struct mva_device {
 	struct mdio_device dev;
 	uint16_t id;
+	uint16_t page_reg;
 };
 
 int mva_read(struct mdio_device *dev, struct mdio_prog *prog, uint32_t reg)
@@ -24,15 +27,15 @@ int mva_read(struct mdio_device *dev, struct mdio_prog *prog, uint32_t reg)
 	reg &= 0x1f;
 
 	/* Save current page in R1 and write the requested one, if they differ. */
-	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(MVA_PAGE),  REG(1)));
+	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
 	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
-	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(MVA_PAGE),  IMM(page)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  IMM(page)));
 
 	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(reg),  REG(0)));
 
 	/* Restore old page if we changed it. */
 	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
-	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(MVA_PAGE),  REG(1)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
 	return 0;
 }
 
@@ -46,15 +49,15 @@ int mva_write(struct mdio_device *dev, struct mdio_prog *prog,
 	reg &= 0x1f;
 
 	/* Save current page in R1 and write the requested one, if they differ. */
-	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(MVA_PAGE),  REG(1)));
+	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
 	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
-	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(MVA_PAGE),  IMM(page)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  IMM(page)));
 
 	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(reg),  val));
 
 	/* Restore old page if we changed it. */
 	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
-	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(MVA_PAGE),  REG(1)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
 	return 0;
 }
 
@@ -70,14 +73,16 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 		return ENOSYS;
 	}
 
+	struct mva_device *pdev = (void *)dev;
+
 	str = argv_pop(argcp, argvp);
 	tok = str ? strtok(str, ":") : NULL;
 	if (!tok) {
 		fprintf(stderr, "ERROR: PAGE:REG\n");
 		return EINVAL;
-	} else if (!strcmp(tok, "copper") || !strcmp(tok, "cu")) {
+	} else if (pdev->page_reg == MVA_PAGE && (!strcmp(tok, "copper") || !strcmp(tok, "cu"))) {
 		page = MVA_PAGE_COPPER;
-	} else if (!strcmp(tok, "fiber") || !strcmp(tok, "fibre")) {
+	} else if (pdev->page_reg == MVA_PAGE && (!strcmp(tok, "fiber") || !strcmp(tok, "fibre"))) {
 		page = MVA_PAGE_FIBER;
 	} else {
 		r = strtoul(tok, &end, 0);
@@ -154,7 +159,7 @@ int mva_exec_status(struct mva_device *pdev, int argc, char **argv)
 		INSN(EMIT,  REG(0),   0,         0),
 		INSN(READ,  IMM(pdev->id), IMM(3),  REG(0)),
 		INSN(EMIT,  REG(0),   0,         0),
-		INSN(READ,  IMM(pdev->id), IMM(MVA_PAGE),  REG(0)),
+		INSN(READ,  IMM(pdev->id), IMM(pdev->page_reg),  REG(0)),
 		INSN(EMIT,  REG(0),   0,         0),
 	};
 	struct mdio_prog prog = MDIO_PROG_FIXED(insns);
@@ -169,6 +174,21 @@ int mva_exec_status(struct mva_device *pdev, int argc, char **argv)
 	return 0;
 }
 
+static int mva_common_exec(struct mva_device *pdev, int argc, char **argv)
+{
+	char *arg;
+
+	arg = argv_pop(&argc, &argv);
+	if (!arg || mdio_parse_dev(arg, &pdev->id, true))
+		return 1;
+
+	arg = argv_peek(argc, argv);
+	if (!arg || !strcmp(arg, "status"))
+		return mva_exec_status(pdev, argc, argv);
+
+	return mdio_common_exec(&pdev->dev, argc, argv);
+}
+
 int mva_exec(const char *bus, int argc, char **argv)
 {
 	struct mva_device pdev = {
@@ -181,17 +201,28 @@ int mva_exec(const char *bus, int argc, char **argv)
 				.width = 16,
 			},
 		},
+		.page_reg = MVA_PAGE,
 	};
-	char *arg;
-
-	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_dev(arg, &pdev.id, true))
-		return 1;
-
-	arg = argv_peek(argc, argv);
-	if (!arg || !strcmp(arg, "status"))
-		return mva_exec_status(&pdev, argc, argv);
-
-	return mdio_common_exec(&pdev.dev, argc, argv);
+	return mva_common_exec(&pdev, argc, argv);
 }
+
+int mscc_exec(const char *bus, int argc, char **argv)
+{
+	struct mva_device pdev = {
+		.dev = {
+			.bus = bus,
+			.driver = &mva_driver,
+
+			.mem = {
+				.stride = 1,
+				.width = 16,
+				.max = 31,
+			},
+		},
+		.page_reg = MSCC_PAGE,
+	};
+	return mva_common_exec(&pdev, argc, argv);
+}
+
 DEFINE_CMD("mva", mva_exec);
+DEFINE_CMD("mscc", mscc_exec);

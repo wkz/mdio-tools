@@ -69,6 +69,12 @@ OBJECTS
 
     REG: u8|"copper"|"fiber":u5
 
+  mscc PHYAD
+    Operate on Microsemi/Microchip (VSC85xx) PHY using address PHYAD.
+    Register 31 is assumed to be the page register.
+
+    REG: u8:u5
+
   mvls ID
     Operate on Marvell LinkStreet (mv88e6xxx) device attached to BUS
     using address ID. If ID is 0, single-chip addressing is used; all
@@ -124,6 +130,10 @@ EXAMPLES
   Read status register from the copper page of an Alaska PHY:
     ~# mdio 3* mva 1 raw copper:1
     0x796d
+
+  Read register from page 1 of a Microsemi PHY:
+    ~# mdio 3* mscc 1 raw 1:25
+    0x1234
 
   Set the device number, of LinkStreet switch 4, to 10:
     ~# mdio 3* mvls 4 raw g1:28 0xa/0xfff0
