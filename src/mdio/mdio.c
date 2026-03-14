@@ -182,22 +182,14 @@ void mdio_prog_push(struct mdio_prog *prog, struct mdio_nl_insn insn)
 	memcpy(&prog->insns[prog->len - 1], &insn, sizeof(insn));
 }
 
-int mdio_device_dflt_parse_reg(struct mdio_device *dev,
-			       int *argcp, char ***argvp,
-			       uint32_t *regs, uint32_t *rege)
+int mdio_parse_range(struct mdio_device *dev, char *str, uint32_t *regs, uint32_t *rege)
 {
+	const char *arg = str;
 	unsigned long long rs, re, base = 0;
-	char *arg, *str, *end;
+	char *end;
 
 	errno = 0;
 
-	arg = argv_pop(argcp, argvp);
-	if (!arg) {
-		fprintf(stderr, "ERROR: Expected register\n");
-		return EINVAL;
-	}
-
-	str = arg;
 	rs = strtoull(str, &end, 0);
 	if (errno)
 		goto inval;
@@ -248,6 +240,20 @@ int mdio_device_dflt_parse_reg(struct mdio_device *dev,
 		*rege = re;
 
 	return 0;
+}
+
+int mdio_device_dflt_parse_reg(struct mdio_device *dev,
+			       int *argcp, char ***argvp,
+			       uint32_t *regs, uint32_t *rege)
+{
+	char *arg = argv_pop(argcp, argvp);
+
+	if (!arg) {
+		fprintf(stderr, "ERROR: Expected register\n");
+		return EINVAL;
+	}
+
+	return mdio_parse_range(dev, arg, regs, rege);
 }
 
 int mdio_device_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,

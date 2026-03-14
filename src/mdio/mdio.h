@@ -152,6 +152,8 @@ struct mdio_driver {
 			 uint32_t *val, uint32_t *mask);
 };
 
+int mdio_parse_range(struct mdio_device *dev, char *str, uint32_t *regs, uint32_t *rege);
+
 int mdio_common_exec(struct mdio_device *dev, int argc, char **argv);
 
 int bus_status(const char *bus);
