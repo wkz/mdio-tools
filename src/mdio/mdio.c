@@ -499,11 +499,6 @@ int mdio_common_bench_exec(struct mdio_device *dev, int argc, char **argv)
 	return 0;
 }
 
-struct reg_range {
-	uint32_t start;
-	uint32_t end;
-};
-
 int mdio_common_dump_cb(uint32_t *data, int len, int err, void *_range)
 {
 	struct reg_range *range = _range;
@@ -529,15 +524,21 @@ int mdio_common_dump_exec_one(struct mdio_device *dev, int *argc, char ***argv)
 	if (err)
 		return err;
 
-	/* Can't emit a loop, since there's no way to pass the (mdio)
-	 * register in a (mdio-netlink) register - so we unroll it. */
-	for (reg = range.start; reg <= range.end; reg++) {
-		err = dev->driver->read(dev, &prog, reg);
+	if(dev->driver->dump) {
+		err = dev->driver->dump(dev, &prog, &range);
 		if (err)
 			return err;
+	} else {
+		/* Can't emit a loop, since there's no way to pass the (mdio)
+		* register in a (mdio-netlink) register - so we unroll it. */
+		for (reg = range.start; reg <= range.end; reg++) {
+			err = dev->driver->read(dev, &prog, reg);
+			if (err)
+				return err;
 
-		mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
-	}
+			mdio_prog_push(&prog, INSN(EMIT, REG(0), 0, 0));
+		}
+ }
 
 	err = mdio_xfer_timeout(dev->bus, &prog, mdio_common_dump_cb, &range, 10000);
 	free(prog.insns);
