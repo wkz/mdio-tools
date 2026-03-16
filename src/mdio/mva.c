@@ -64,16 +64,10 @@ int mva_write(struct mdio_device *dev, struct mdio_prog *prog,
 static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 			 uint32_t *regs, uint32_t *rege)
 {
+	struct mva_device *pdev = (void *)dev;
 	char *str, *tok, *end;
 	unsigned long r;
 	uint8_t page;
-
-	if (rege) {
-		fprintf(stderr, "ERROR: Implement ranges\n");
-		return ENOSYS;
-	}
-
-	struct mva_device *pdev = (void *)dev;
 
 	str = argv_pop(argcp, argvp);
 	tok = str ? strtok(str, ":") : NULL;
@@ -105,26 +99,45 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 		return EINVAL;
 	}
 
-	r = strtoul(tok, &end, 0);
-	if (*end) {
-		fprintf(stderr, "ERROR: \"%s\" is not a valid register\n",
-			tok);
+	if(mdio_parse_range(dev, tok, regs, rege))
 		return EINVAL;
-	}
 
-	if (r > 31) {
-		fprintf(stderr, "ERROR: register %lu is out of range [0-31]\n", r);
-		return EINVAL;
-	}
+	*regs |= (page << 16);
 
-	*regs = (page << 16) | r;
 	return 0;
 }
+
+int mva_dump (struct mdio_device *dev, struct mdio_prog *prog,
+			struct reg_range *range) {
+	struct mva_device *pdev = (void *)dev;
+	uint8_t page;
+	uint32_t reg;
+
+	page = range->start >> 16;
+	range->start &= 0x1f;
+
+	/* Save current page in R1 and write the requested one, if they differ. */
+	mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
+	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  IMM(page)));
+
+	for (reg = range->start; reg <= range->end; reg++) {
+		mdio_prog_push(prog, INSN(READ,  IMM(pdev->id), IMM(reg),  REG(0)));
+		mdio_prog_push(prog, INSN(EMIT, REG(0), 0, 0));
+	}
+
+	/* Restore old page if we changed it. */
+	mdio_prog_push(prog, INSN(JEQ,  REG(1), IMM(page),  IMM(1)));
+	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
+
+	return 0;
+	}
 
 static const struct mdio_driver mva_driver = {
 	.read = mva_read,
 	.write = mva_write,
 
+	.dump = mva_dump,
 	.parse_reg = mva_parse_reg,
 };
 
@@ -199,6 +212,7 @@ int mva_exec(const char *bus, int argc, char **argv)
 			.mem = {
 				.stride = 1,
 				.width = 16,
+				.max = 31,
 			},
 		},
 		.page_reg = MVA_PAGE,
