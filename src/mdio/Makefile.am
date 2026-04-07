@@ -8,7 +8,7 @@ mdio_SOURCES = \
 	mvls.c \
 	paged-phy.c \
 	phy.c \
-	print_phy.c \
+	print-phy.c \
 	xrs.c
 
 mdio_CFLAGS  = -Wall -Wextra -Werror -Wno-unused-parameter -I $(top_srcdir)/include $(mnl_CFLAGS)
