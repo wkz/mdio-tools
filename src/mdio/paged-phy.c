@@ -6,21 +6,22 @@
 
 #include "mdio.h"
 
-#define MVA_PAGE 0x16
-#define MVA_PAGE_COPPER 0
-#define MVA_PAGE_FIBER  1
-
-#define MSCC_PAGE 0x1f
-
-struct mva_device {
-	struct mdio_device dev;
-	uint16_t id;
-	uint16_t page_reg;
+struct pphy_page_name {
+	const char *name;
+	uint8_t page;
 };
 
-int mva_read(struct mdio_device *dev, struct mdio_prog *prog, uint32_t reg)
+struct pphy_device {
+	struct mdio_device dev;
+	uint16_t id;
+	uint8_t page_reg;
+
+	const struct pphy_page_name *page_names;
+};
+
+int pphy_read(struct mdio_device *dev, struct mdio_prog *prog, uint32_t reg)
 {
-	struct mva_device *pdev = (void *)dev;
+	struct pphy_device *pdev = (void *)dev;
 	uint8_t page;
 
 	page = reg >> 16;
@@ -39,10 +40,10 @@ int mva_read(struct mdio_device *dev, struct mdio_prog *prog, uint32_t reg)
 	return 0;
 }
 
-int mva_write(struct mdio_device *dev, struct mdio_prog *prog,
-	      uint32_t reg, uint32_t val)
+int pphy_write(struct mdio_device *dev, struct mdio_prog *prog,
+	       uint32_t reg, uint32_t val)
 {
-	struct mva_device *pdev = (void *)dev;
+	struct pphy_device *pdev = (void *)dev;
 	uint8_t page;
 
 	page = reg >> 16;
@@ -61,37 +62,52 @@ int mva_write(struct mdio_device *dev, struct mdio_prog *prog,
 	return 0;
 }
 
-static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
-			 uint32_t *regs, uint32_t *rege)
+static int pphy_parse_page(struct pphy_device *pdev, const char *tok, uint8_t *page)
 {
-	struct mva_device *pdev = (void *)dev;
-	char *str, *tok, *end;
+	const struct pphy_page_name *pn;
 	unsigned long r;
+	char *end;
+
+	for (pn = pdev->page_names; pn && pn->name; pn++) {
+		if (!strcmp(tok, pn->name)) {
+			*page = pn->page;
+			return 0;
+		}
+	}
+
+	r = strtoul(tok, &end, 0);
+	if (*end) {
+		fprintf(stderr, "ERROR: \"%s\" is not a valid page\n", tok);
+		return EINVAL;
+	}
+
+	if (r > 255) {
+		fprintf(stderr, "ERROR: page %lu is out of range [0-255]\n", r);
+		return EINVAL;
+	}
+
+	*page = r;
+	return 0;
+}
+
+static int pphy_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
+			  uint32_t *regs, uint32_t *rege)
+{
+	struct pphy_device *pdev = (void *)dev;
+	char *str, *tok;
 	uint8_t page;
+	int err;
 
 	str = argv_pop(argcp, argvp);
 	tok = str ? strtok(str, ":") : NULL;
 	if (!tok) {
 		fprintf(stderr, "ERROR: PAGE:REG\n");
 		return EINVAL;
-	} else if (pdev->page_reg == MVA_PAGE && (!strcmp(tok, "copper") || !strcmp(tok, "cu"))) {
-		page = MVA_PAGE_COPPER;
-	} else if (pdev->page_reg == MVA_PAGE && (!strcmp(tok, "fiber") || !strcmp(tok, "fibre"))) {
-		page = MVA_PAGE_FIBER;
-	} else {
-		r = strtoul(tok, &end, 0);
-		if (*end) {
-			fprintf(stderr, "ERROR: \"%s\" is not a valid page\n", tok);
-			return EINVAL;
-		}
-
-		if (r > 255) {
-			fprintf(stderr, "ERROR: page %lu is out of range [0-255]\n", r);
-			return EINVAL;
-		}
-
-		page = r;
 	}
+
+	err = pphy_parse_page(pdev, tok, &page);
+	if (err)
+		return err;
 
 	tok = strtok(NULL, ":");
 	if (!tok) {
@@ -99,7 +115,7 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 		return EINVAL;
 	}
 
-	if(mdio_parse_range(dev, tok, regs, rege))
+	if (mdio_parse_range(dev, tok, regs, rege))
 		return EINVAL;
 
 	*regs |= (page << 16);
@@ -107,9 +123,10 @@ static int mva_parse_reg(struct mdio_device *dev, int *argcp, char ***argvp,
 	return 0;
 }
 
-int mva_dump (struct mdio_device *dev, struct mdio_prog *prog,
-			struct reg_range *range) {
-	struct mva_device *pdev = (void *)dev;
+int pphy_dump(struct mdio_device *dev, struct mdio_prog *prog,
+	      struct reg_range *range)
+{
+	struct pphy_device *pdev = (void *)dev;
 	uint8_t page;
 	uint32_t reg;
 
@@ -131,14 +148,14 @@ int mva_dump (struct mdio_device *dev, struct mdio_prog *prog,
 	mdio_prog_push(prog, INSN(WRITE,  IMM(pdev->id), IMM(pdev->page_reg),  REG(1)));
 
 	return 0;
-	}
+}
 
-static const struct mdio_driver mva_driver = {
-	.read = mva_read,
-	.write = mva_write,
+static const struct mdio_driver pphy_driver = {
+	.read = pphy_read,
+	.write = pphy_write,
 
-	.dump = mva_dump,
-	.parse_reg = mva_parse_reg,
+	.dump = pphy_dump,
+	.parse_reg = pphy_parse_reg,
 };
 
 int mva_status_cb(uint32_t *data, int len, int err, void *_null)
@@ -161,7 +178,7 @@ int mva_status_cb(uint32_t *data, int len, int err, void *_null)
 	return err;
 }
 
-int mva_exec_status(struct mva_device *pdev, int argc, char **argv)
+int mva_exec_status(struct pphy_device *pdev, int argc, char **argv)
 {
 	struct mdio_nl_insn insns[] = {
 		INSN(READ,  IMM(pdev->id), IMM(0),  REG(0)),
@@ -187,45 +204,51 @@ int mva_exec_status(struct mva_device *pdev, int argc, char **argv)
 	return 0;
 }
 
-static int mva_common_exec(struct mva_device *pdev, int argc, char **argv)
+int mva_exec(const char *bus, int argc, char **argv)
 {
+	static const struct pphy_page_name page_names[] = {
+		{ .name = "copper", .page = 0 },
+		{ .name = "cu",     .page = 0 },
+		{ .name = "fiber",  .page = 1 },
+		{ .name = "fibre",  .page = 1 },
+
+		{ .name = NULL }
+	};
+
+	struct pphy_device pdev = {
+		.dev = {
+			.bus = bus,
+			.driver = &pphy_driver,
+
+			.mem = {
+				.stride = 1,
+				.width = 16,
+				.max = 31,
+			},
+		},
+		.page_reg = 0x16,
+		.page_names = page_names,
+	};
 	char *arg;
 
 	arg = argv_pop(&argc, &argv);
-	if (!arg || mdio_parse_dev(arg, &pdev->id, true))
+	if (!arg || mdio_parse_dev(arg, &pdev.id, true))
 		return 1;
 
 	arg = argv_peek(argc, argv);
 	if (!arg || !strcmp(arg, "status"))
-		return mva_exec_status(pdev, argc, argv);
+		return mva_exec_status(&pdev, argc, argv);
 
-	return mdio_common_exec(&pdev->dev, argc, argv);
+	return mdio_common_exec(&pdev.dev, argc, argv);
 }
-
-int mva_exec(const char *bus, int argc, char **argv)
-{
-	struct mva_device pdev = {
-		.dev = {
-			.bus = bus,
-			.driver = &mva_driver,
-
-			.mem = {
-				.stride = 1,
-				.width = 16,
-				.max = 31,
-			},
-		},
-		.page_reg = MVA_PAGE,
-	};
-	return mva_common_exec(&pdev, argc, argv);
-}
+DEFINE_CMD("mva", mva_exec);
 
 int mscc_exec(const char *bus, int argc, char **argv)
 {
-	struct mva_device pdev = {
+	struct pphy_device pdev = {
 		.dev = {
 			.bus = bus,
-			.driver = &mva_driver,
+			.driver = &pphy_driver,
 
 			.mem = {
 				.stride = 1,
@@ -233,10 +256,14 @@ int mscc_exec(const char *bus, int argc, char **argv)
 				.max = 31,
 			},
 		},
-		.page_reg = MSCC_PAGE,
+		.page_reg = 0x1f,
 	};
-	return mva_common_exec(&pdev, argc, argv);
-}
+	char *arg;
 
-DEFINE_CMD("mva", mva_exec);
+	arg = argv_pop(&argc, &argv);
+	if (!arg || mdio_parse_dev(arg, &pdev.id, true))
+		return 1;
+
+	return mdio_common_exec(&pdev.dev, argc, argv);
+}
 DEFINE_CMD("mscc", mscc_exec);
