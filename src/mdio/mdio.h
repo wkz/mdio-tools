@@ -86,6 +86,11 @@ extern const struct mmd_print_device an_print_device;
 int mdio_parse_bus(const char *str, char **bus);
 int mdio_parse_dev(const char *str, uint16_t *dev, bool allow_c45);
 
+struct reg_range {
+	uint32_t start;
+	uint32_t end;
+};
+
 struct mdio_prog {
 	struct mdio_nl_insn *insns;
 	int len;
@@ -146,11 +151,15 @@ struct mdio_driver {
 		     uint32_t reg, uint32_t val);
 
 	/* Optional */
+	int (*dump) (struct mdio_device *dev, struct mdio_prog *prog,
+		     struct reg_range *range);
 	int (*parse_reg)(struct mdio_device *dev, int *argcp, char ***argvp,
 			 uint32_t *regs, uint32_t *rege);
 	int (*parse_val)(struct mdio_device *dev, int *argcp, char ***argvp,
 			 uint32_t *val, uint32_t *mask);
 };
+
+int mdio_parse_range(struct mdio_device *dev, char *str, uint32_t *regs, uint32_t *rege);
 
 int mdio_common_exec(struct mdio_device *dev, int argc, char **argv);
 
