@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT(mdio-tools, m4_esyscmd_s(git describe --always --dirty --tags),
+AC_INIT(mdio-tools, m4_esyscmd_s(git describe --always --dirty --tags 2>/dev/null || echo 1.3.1),
 	https://github.com/wkz/mdio-tools/issues)
 AC_CONFIG_AUX_DIR(aux)
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
