@@ -3,6 +3,18 @@ ChangeLog
 
 All notable changes to the project are documented in this file.
 
+[v1.3.2] - 2026-04-14
+---------------------
+
+Build fixes and support for Microchip's paged PHYs.
+
+### Added
+- mdio: A new addressing mode "mscc": Used to access PHYs from
+  Microchip that uses C22 register 31 as a page register
+
+### Fixed
+- mdio: Fix VPATH builds and various other build related warnings
+
 [v1.3.1] - 2023-12-02
 ---------------------
 
