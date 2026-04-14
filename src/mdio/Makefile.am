@@ -11,6 +11,8 @@ mdio_SOURCES = \
 	print-phy.c \
 	xrs.c
 
+EXTRA_DIST = cmds.ld
+
 mdio_CFLAGS  = -Wall -Wextra -Werror -Wno-unused-parameter -I $(top_srcdir)/include $(mnl_CFLAGS)
-mdio_LDFLAGS = -T $(top_srcdir)/src/mdio/cmds.ld
+mdio_LDFLAGS = -T $(srcdir)/cmds.ld
 mdio_LDADD   = $(mnl_LIBS)
