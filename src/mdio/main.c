@@ -17,7 +17,7 @@ int usage(int rc, FILE *fp)
 	      "\n"
 	      "OPTIONS\n"
 	      "  -h   This help text\n"
-	      "  -v   Show verision and contact information\n"
+	      "  -v   Show version and contact information\n"
 	      "\n"
 	      "Bus names may be abbreviated using glob(3) syntax, i.e. \"fixed*\"\n"
 	      "would typically match against \"fixed-0\".\n"
